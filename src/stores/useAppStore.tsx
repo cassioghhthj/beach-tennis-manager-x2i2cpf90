@@ -112,6 +112,28 @@ export interface PontuacaoRodada {
   total: number
 }
 
+export interface RankingSnapshotItem {
+  posicao: number
+  atleta_id: string
+  nome: string
+  avatar?: string
+  categoria: string
+  total: number
+  podios: number
+  bonus_5x0: number
+  media: string
+  rodadas: Record<string, number>
+}
+
+export interface Publicacao {
+  id: string
+  data_publicacao: string
+  liga_id: string
+  liga_nome: string
+  temporada: string
+  ranking: RankingSnapshotItem[]
+}
+
 const generateId = () => Math.random().toString(36).substring(2, 11)
 
 const initialLigas: Liga[] = [
@@ -174,12 +196,12 @@ const initialRodadas: Rodada[] = [
     hora: '08:00',
     local: 'Arena Beach',
     sistema_id: 's1',
-    status: 'In Progress',
+    status: 'Round Finalized',
     observacoes: '',
   },
 ]
 
-const initialGrupos: Grupo[] = [{ id: 'g1', rodada_id: 'r1', nome: 'Grupo A', finalizado: false }]
+const initialGrupos: Grupo[] = [{ id: 'g1', rodada_id: 'r1', nome: 'Grupo A', finalizado: true }]
 
 const initialGrupoAtletas: GrupoAtleta[] = [
   { id: 'ga1', grupo_id: 'g1', atleta_id: 'a1', status: 'Active' },
@@ -199,15 +221,63 @@ const initialPartidas: Partida[] = [
     atleta4_id: 'a4',
     score2: 0,
   },
+]
+
+const initialPontuacoes: PontuacaoRodada[] = [
   {
-    id: 'p2',
-    grupo_id: 'g1',
-    atleta1_id: 'a1',
-    atleta2_id: 'a3',
-    score1: 5,
-    atleta3_id: 'a2',
-    atleta4_id: 'a4',
-    score2: 2,
+    id: 'pt1',
+    rodada_id: 'r1',
+    atleta_id: 'a1',
+    pontos_grupo: 0,
+    pontos_vitorias: 10,
+    bonus_5x0: 5,
+    pontos_podio_principal: 50,
+    pontos_podio_consolacao: 0,
+    total: 65,
+  },
+  {
+    id: 'pt2',
+    rodada_id: 'r1',
+    atleta_id: 'a2',
+    pontos_grupo: 0,
+    pontos_vitorias: 10,
+    bonus_5x0: 5,
+    pontos_podio_principal: 30,
+    pontos_podio_consolacao: 0,
+    total: 45,
+  },
+  {
+    id: 'pt3',
+    rodada_id: 'r1',
+    atleta_id: 'a3',
+    pontos_grupo: 0,
+    pontos_vitorias: 0,
+    bonus_5x0: 0,
+    pontos_podio_principal: 20,
+    pontos_podio_consolacao: 0,
+    total: 20,
+  },
+]
+
+const initialPublicacoes: Publicacao[] = [
+  {
+    id: 'pub1',
+    data_publicacao: new Date().toISOString(),
+    liga_id: '1',
+    liga_nome: 'Liga Smash Categoria D',
+    temporada: '2023',
+    ranking: initialAtletas.slice(0, 10).map((a, i) => ({
+      posicao: i + 1,
+      atleta_id: a.id,
+      nome: a.nome_completo,
+      avatar: a.avatar_url,
+      categoria: a.categoria_principal,
+      total: 150 - i * 12,
+      podios: i < 3 ? 1 : 0,
+      bonus_5x0: i % 2 === 0 ? 1 : 0,
+      media: (15 - i * 1.2).toFixed(1),
+      rodadas: { R1: 150 - i * 12 },
+    })),
   },
 ]
 
@@ -249,6 +319,14 @@ interface AppState {
   salvarPodiosRodada: (rodadaId: string, p: Podio[]) => void
   pontuacoes: PontuacaoRodada[]
   finalizarRodada: (rodadaId: string) => void
+  publicacoes: Publicacao[]
+  publicarRanking: (
+    ligaId: string,
+    ligaNome: string,
+    temporada: string,
+    ranking: RankingSnapshotItem[],
+  ) => void
+  deletePublicacao: (id: string) => void
 }
 
 const AppContext = createContext<AppState | undefined>(undefined)
@@ -265,7 +343,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [grupoAtletas, setGrupoAtletas] = useState<GrupoAtleta[]>(initialGrupoAtletas)
   const [partidas, setPartidas] = useState<Partida[]>(initialPartidas)
   const [podios, setPodios] = useState<Podio[]>([])
-  const [pontuacoes, setPontuacoes] = useState<PontuacaoRodada[]>([])
+  const [pontuacoes, setPontuacoes] = useState<PontuacaoRodada[]>(initialPontuacoes)
+  const [publicacoes, setPublicacoes] = useState<Publicacao[]>(initialPublicacoes)
 
   const login = () => setIsAuthenticated(true)
   const logout = () => setIsAuthenticated(false)
@@ -450,6 +529,27 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }, 0)
   }
 
+  const publicarRanking = (
+    ligaId: string,
+    ligaNome: string,
+    temporada: string,
+    ranking: RankingSnapshotItem[],
+  ) => {
+    const novaPub: Publicacao = {
+      id: generateId(),
+      data_publicacao: new Date().toISOString(),
+      liga_id: ligaId,
+      liga_nome: ligaNome,
+      temporada,
+      ranking,
+    }
+    setPublicacoes((prev) => [novaPub, ...prev])
+  }
+
+  const deletePublicacao = (id: string) => {
+    setPublicacoes((prev) => prev.filter((p) => p.id !== id))
+  }
+
   return (
     <AppContext.Provider
       value={{
@@ -487,6 +587,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         salvarPodiosRodada,
         pontuacoes,
         finalizarRodada,
+        publicacoes,
+        publicarRanking,
+        deletePublicacao,
       }}
     >
       {children}

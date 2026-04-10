@@ -26,12 +26,14 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Input } from '@/components/ui/input'
-import { Search, Trophy } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Search, Trophy, Globe } from 'lucide-react'
+import { toast } from 'sonner'
 
 const R_COLS = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10', 'R11', 'R12']
 
 export default function Ranking() {
-  const { ligas, rodadas, pontuacoes, atletas } = useAppStore()
+  const { ligas, rodadas, pontuacoes, atletas, publicarRanking } = useAppStore()
 
   const [ligaId, setLigaId] = useState<string>('')
   const [search, setSearch] = useState('')
@@ -82,15 +84,45 @@ export default function Ranking() {
     [rankingData, selectedAtletaId],
   )
 
+  const handlePublish = () => {
+    if (!ligaId) return
+    const liga = ligas.find((l) => l.id === ligaId)
+    if (!liga) return
+
+    const snapshot = rankingData.map((r, i) => ({
+      posicao: i + 1,
+      atleta_id: r.atleta_id,
+      nome: r.nome,
+      avatar: r.avatar,
+      categoria: r.categoria,
+      total: r.total,
+      podios: r.podios,
+      bonus_5x0: r.bonus_5x0,
+      media: r.jogadas > 0 ? (r.total / r.jogadas).toFixed(1) : '0.0',
+      rodadas: r.rodadas,
+    }))
+
+    publicarRanking(liga.id, liga.nome, liga.temporada, snapshot)
+    toast.success('Ranking publicado!', {
+      description: 'Os dados já estão visíveis no portal público.',
+    })
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Ranking Geral</h2>
+          <h2 className="text-3xl font-bold tracking-tight">Ranking Interno</h2>
           <p className="text-muted-foreground">
-            Acompanhe a performance acumulada dos atletas em todas as rodadas.
+            Acompanhe a performance acumulada e gerencie a publicação.
           </p>
         </div>
+        {ligaId && rankingData.length > 0 && (
+          <Button onClick={handlePublish} className="w-full sm:w-auto gap-2">
+            <Globe className="h-4 w-4" />
+            Publicar no Portal
+          </Button>
+        )}
       </div>
 
       <Card>

@@ -10,6 +10,7 @@ import {
   Medal,
   LogOut,
   Search,
+  History,
 } from 'lucide-react'
 import {
   SidebarProvider,
@@ -49,7 +50,8 @@ export default function AdminLayout() {
     { name: 'Rodadas', to: '/admin/rodadas', icon: CalendarDays },
     { name: 'Lançar Resultados', to: '/admin/resultados', icon: ClipboardList },
     { name: 'Auditoria de Pontuação', to: '/admin/auditoria', icon: ShieldCheck },
-    { name: 'Ranking Geral', to: '/admin/ranking', icon: Medal },
+    { name: 'Ranking Interno', to: '/admin/ranking', icon: Medal },
+    { name: 'Histórico de Publicações', to: '/admin/publicacoes', icon: History },
   ]
 
   return (
@@ -117,9 +119,14 @@ export default function AdminLayout() {
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem asChild>
+                    <Link to="/" className="cursor-pointer">
+                      Ver Portal Público
+                    </Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={handleLogout}
-                    className="text-destructive cursor-pointer"
+                    className="text-destructive cursor-pointer border-t mt-1"
                   >
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Sair da conta</span>
