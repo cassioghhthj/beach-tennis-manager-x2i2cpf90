@@ -1,29 +1,59 @@
-/* Main App Component - Handles routing (using react-router-dom), query client and other providers - use this file to add all routes */
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Toaster } from '@/components/ui/toaster'
 import { Toaster as Sonner } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import Index from './pages/Index'
+import useAppStore, { AppProvider } from '@/stores/useAppStore'
 import NotFound from './pages/NotFound'
-import Layout from './components/Layout'
+import Login from './pages/Login'
+import AdminLayout from './components/AdminLayout'
+import Dashboard from './pages/admin/Dashboard'
+import Ligas from './pages/admin/Ligas'
+import Atletas from './pages/admin/Atletas'
+import Sistemas from './pages/admin/Sistemas'
+import Placeholder from './pages/admin/Placeholder'
 
-// ONLY IMPORT AND RENDER WORKING PAGES, NEVER ADD PLACEHOLDER COMPONENTS OR PAGES IN THIS FILE
-// AVOID REMOVING ANY CONTEXT PROVIDERS FROM THIS FILE (e.g. TooltipProvider, Toaster, Sonner)
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated } = useAppStore()
+  const location = useLocation()
+  if (!isAuthenticated) return <Navigate to="/login" state={{ from: location }} replace />
+  return children
+}
 
-const App = () => (
+const AppRoutes = () => (
   <BrowserRouter future={{ v7_startTransition: false, v7_relativeSplatPath: false }}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
       <Routes>
-        <Route element={<Layout />}>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES MUST BE ADDED HERE */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/" element={<Navigate to="/admin" replace />} />
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute>
+              <AdminLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Dashboard />} />
+          <Route path="ligas" element={<Ligas />} />
+          <Route path="atletas" element={<Atletas />} />
+          <Route path="sistemas" element={<Sistemas />} />
+          <Route path="rodadas" element={<Placeholder title="Rodadas" />} />
+          <Route path="resultados" element={<Placeholder title="Lançar Resultados" />} />
+          <Route path="auditoria" element={<Placeholder title="Auditoria de Pontuação" />} />
+          <Route path="ranking" element={<Placeholder title="Ranking Geral" />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>
     </TooltipProvider>
   </BrowserRouter>
+)
+
+const App = () => (
+  <AppProvider>
+    <AppRoutes />
+  </AppProvider>
 )
 
 export default App
