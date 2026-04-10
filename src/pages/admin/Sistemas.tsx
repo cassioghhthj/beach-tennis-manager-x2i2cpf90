@@ -20,9 +20,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Star, Copy, Pencil } from 'lucide-react'
+import { Star, Copy, Pencil, Info } from 'lucide-react'
 import useAppStore, { SistemaPontuacao } from '@/stores/useAppStore'
 import { toast } from 'sonner'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
 const defaultGeralKeys = {
   pos_1: 180,
@@ -102,6 +103,21 @@ export default function Sistemas() {
     setEditingId(sistema.id)
   }
 
+  const handleNewSistema = () => {
+    addSistema(
+      {
+        nome: 'Novo Sistema',
+        tipo: 'Geral',
+        ativo: false,
+      },
+      Object.entries(defaultGeralKeys).map(([chave, valor_pontos]) => ({
+        chave,
+        valor_pontos,
+      })),
+    )
+    toast.success('Novo sistema criado com sucesso!')
+  }
+
   const handleChange = (chave: string, valor: string) => {
     setFormData((prev) => ({ ...prev, [chave]: valor }))
   }
@@ -134,10 +150,20 @@ export default function Sistemas() {
           <h2 className="text-2xl font-heading font-bold tracking-tight">Sistemas de Pontuação</h2>
           <p className="text-muted-foreground">Gerencie templates de pontuação para suas ligas.</p>
         </div>
-        <Button>
+        <Button onClick={handleNewSistema}>
           <Star className="mr-2 h-4 w-4" /> Novo Sistema
         </Button>
       </div>
+
+      <Alert className="bg-blue-50/50 text-blue-900 border-blue-200 dark:bg-blue-950/50 dark:text-blue-200 dark:border-blue-900">
+        <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+        <AlertTitle>Aviso de Persistência</AlertTitle>
+        <AlertDescription>
+          Como não há um banco de dados conectado no momento, as alterações são temporárias e
+          armazenadas no estado local. Elas serão perdidas ao recarregar a página até que um
+          provedor de banco de dados (Supabase ou Skip Cloud) seja integrado.
+        </AlertDescription>
+      </Alert>
 
       <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
         {sistemas.map((sistema) => (
@@ -229,7 +255,7 @@ export default function Sistemas() {
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                     {Array.from({ length: 10 }).map((_, i) => (
                       <div key={`pos_${i + 1}`} className="space-y-1">
-                        <Label className="text-xs">{i + 1}º Lugar</Label>
+                        <Label className="text-xs">{i + 1} Lugar</Label>
                         <Input
                           type="number"
                           value={formData[`pos_${i + 1}`] ?? ''}
@@ -244,12 +270,12 @@ export default function Sistemas() {
                   <h4 className="font-semibold border-b pb-2">Pontos por Placar (Vitórias)</h4>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     {[
-                      { k: 'vitoria_5x0', l: 'Vitória 5x0' },
-                      { k: 'vitoria_4x1', l: 'Vitória 4x1' },
-                      { k: 'vitoria_3x2', l: 'Vitória 3x2' },
-                      { k: 'derrota_2x3', l: 'Derrota 2x3' },
-                      { k: 'derrota_1x4', l: 'Derrota 1x4' },
-                      { k: 'derrota_0x5', l: 'Derrota 0x5' },
+                      { k: 'vitoria_5x0', l: 'Vitória de 5x0' },
+                      { k: 'vitoria_4x1', l: 'Vitória de 4x1' },
+                      { k: 'vitoria_3x2', l: 'Vitória de 3x2' },
+                      { k: 'derrota_2x3', l: 'Derrota de 2x3' },
+                      { k: 'derrota_1x4', l: 'Derrota de 1x4' },
+                      { k: 'derrota_0x5', l: 'Derrota de 0x5' },
                     ].map(({ k, l }) => (
                       <div key={k} className="space-y-1">
                         <Label className="text-xs">{l}</Label>
@@ -265,11 +291,11 @@ export default function Sistemas() {
               )}
 
               <div className="space-y-4">
-                <h4 className="font-semibold border-b pb-2">Pódio Principal</h4>
+                <h4 className="font-semibold border-b pb-2">Podio Principal</h4>
                 <div className="grid grid-cols-3 gap-4">
                   {[1, 2, 3].map((pos) => (
                     <div key={`pp_${pos}`} className="space-y-1">
-                      <Label className="text-xs">{pos}º Lugar</Label>
+                      <Label className="text-xs">{pos} Lugar</Label>
                       <Input
                         type="number"
                         value={formData[`podio_principal_${pos}`] ?? ''}
@@ -281,11 +307,11 @@ export default function Sistemas() {
               </div>
 
               <div className="space-y-4">
-                <h4 className="font-semibold border-b pb-2">Pódio Consolação</h4>
+                <h4 className="font-semibold border-b pb-2">Podio Consolação</h4>
                 <div className="grid grid-cols-3 gap-4">
                   {[1, 2, 3].map((pos) => (
                     <div key={`pc_${pos}`} className="space-y-1">
-                      <Label className="text-xs">{pos}º Lugar</Label>
+                      <Label className="text-xs">{pos} Lugar</Label>
                       <Input
                         type="number"
                         value={formData[`podio_consolacao_${pos}`] ?? ''}
@@ -300,7 +326,7 @@ export default function Sistemas() {
                 <h4 className="font-semibold border-b pb-2">Bônus Adicionais</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <Label className="text-xs">Bônus Vitória 5x0</Label>
+                    <Label className="text-xs">Bonus 5x0</Label>
                     <Input
                       type="number"
                       value={formData['bonus_5x0'] ?? ''}
