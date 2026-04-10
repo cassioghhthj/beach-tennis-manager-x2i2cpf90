@@ -59,6 +59,7 @@ export interface Rodada {
   sistema_id: string
   status: RodadaStatus
   observacoes: string
+  snapshot_regras?: RegraPontuacao[]
 }
 
 export interface Grupo {
@@ -90,6 +91,27 @@ export interface Partida {
   score2: number
 }
 
+export interface Podio {
+  id: string
+  rodada_id: string
+  tipo: 'Principal' | 'Consolacao'
+  posicao: 1 | 2 | 3
+  atleta1_id: string
+  atleta2_id?: string
+}
+
+export interface PontuacaoRodada {
+  id: string
+  rodada_id: string
+  atleta_id: string
+  pontos_grupo: number
+  pontos_vitorias: number
+  bonus_5x0: number
+  pontos_podio_principal: number
+  pontos_podio_consolacao: number
+  total: number
+}
+
 const generateId = () => Math.random().toString(36).substring(2, 11)
 
 const initialLigas: Liga[] = [
@@ -101,16 +123,6 @@ const initialLigas: Liga[] = [
     total_rodadas: 12,
     status: 'Ativo',
     descricao: 'Liga amadora',
-    observacoes: '',
-  },
-  {
-    id: '2',
-    nome: 'Liga Beach Sisters Iniciante',
-    categoria: 'Iniciante',
-    temporada: '2023',
-    total_rodadas: 10,
-    status: 'Ativo',
-    descricao: 'Liga feminina',
     observacoes: '',
   },
 ]
@@ -134,10 +146,23 @@ const initialAtletaLigas: AtletaLiga[] = initialAtletas.map((a) => ({
 
 const initialSistemas: SistemaPontuacao[] = [
   { id: 's1', nome: 'Sistema Geral Pro', tipo: 'Geral', ativo: true },
+  { id: 's2', nome: 'Sistema Vitórias', tipo: 'Vitorias', ativo: true },
 ]
 
 const initialRegras: RegraPontuacao[] = [
-  { id: generateId(), sistema_id: 's1', chave: 'vitoria', valor_pontos: 10 },
+  { id: 'r1', sistema_id: 's1', chave: 'vitoria', valor_pontos: 10 },
+  { id: 'r2', sistema_id: 's1', chave: 'bonus_5x0', valor_pontos: 5 },
+  { id: 'r3', sistema_id: 's1', chave: 'podio_principal_1', valor_pontos: 50 },
+  { id: 'r4', sistema_id: 's1', chave: 'podio_principal_2', valor_pontos: 30 },
+  { id: 'r5', sistema_id: 's1', chave: 'podio_principal_3', valor_pontos: 20 },
+  { id: 'r6', sistema_id: 's1', chave: 'podio_consolacao_1', valor_pontos: 15 },
+  { id: 'r7', sistema_id: 's1', chave: 'podio_consolacao_2', valor_pontos: 10 },
+  { id: 'r8', sistema_id: 's1', chave: 'podio_consolacao_3', valor_pontos: 5 },
+  { id: 'r9', sistema_id: 's2', chave: 'vitoria_5x0', valor_pontos: 20 },
+  { id: 'r10', sistema_id: 's2', chave: 'vitoria_5x1', valor_pontos: 15 },
+  { id: 'r11', sistema_id: 's2', chave: 'vitoria_5x2', valor_pontos: 10 },
+  { id: 'r12', sistema_id: 's2', chave: 'vitoria_5x3', valor_pontos: 8 },
+  { id: 'r13', sistema_id: 's2', chave: 'vitoria_5x4', valor_pontos: 5 },
 ]
 
 const initialRodadas: Rodada[] = [
@@ -169,10 +194,20 @@ const initialPartidas: Partida[] = [
     grupo_id: 'g1',
     atleta1_id: 'a1',
     atleta2_id: 'a2',
-    score1: 6,
+    score1: 5,
     atleta3_id: 'a3',
     atleta4_id: 'a4',
-    score2: 4,
+    score2: 0,
+  },
+  {
+    id: 'p2',
+    grupo_id: 'g1',
+    atleta1_id: 'a1',
+    atleta2_id: 'a3',
+    score1: 5,
+    atleta3_id: 'a2',
+    atleta4_id: 'a4',
+    score2: 2,
   },
 ]
 
@@ -210,6 +245,10 @@ interface AppState {
   addPartida: (p: Omit<Partida, 'id'>) => void
   updatePartida: (id: string, p: Partial<Partida>) => void
   deletePartida: (id: string) => void
+  podios: Podio[]
+  salvarPodiosRodada: (rodadaId: string, p: Podio[]) => void
+  pontuacoes: PontuacaoRodada[]
+  finalizarRodada: (rodadaId: string) => void
 }
 
 const AppContext = createContext<AppState | undefined>(undefined)
@@ -225,6 +264,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [grupos, setGrupos] = useState<Grupo[]>(initialGrupos)
   const [grupoAtletas, setGrupoAtletas] = useState<GrupoAtleta[]>(initialGrupoAtletas)
   const [partidas, setPartidas] = useState<Partida[]>(initialPartidas)
+  const [podios, setPodios] = useState<Podio[]>([])
+  const [pontuacoes, setPontuacoes] = useState<PontuacaoRodada[]>([])
 
   const login = () => setIsAuthenticated(true)
   const logout = () => setIsAuthenticated(false)
@@ -299,6 +340,116 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setPartidas((prev) => prev.map((item) => (item.id === id ? { ...item, ...p } : item)))
   const deletePartida = (id: string) => setPartidas((prev) => prev.filter((item) => item.id !== id))
 
+  const salvarPodiosRodada = (rodadaId: string, novos: Podio[]) => {
+    setPodios((prev) => [...prev.filter((p) => p.rodada_id !== rodadaId), ...novos])
+  }
+
+  const finalizarRodada = (rodadaId: string) => {
+    let currentRegras: RegraPontuacao[] = []
+    setRodadas((prev) =>
+      prev.map((r) => {
+        if (r.id === rodadaId) {
+          currentRegras = regras.filter((reg) => reg.sistema_id === r.sistema_id)
+          return { ...r, status: 'Round Finalized', snapshot_regras: currentRegras }
+        }
+        return r
+      }),
+    )
+
+    setTimeout(() => {
+      setPontuacoes((prev) => {
+        const filtered = prev.filter((p) => p.rodada_id !== rodadaId)
+        const rodada = rodadas.find((r) => r.id === rodadaId)
+        if (!rodada) return filtered
+        const sis = sistemas.find((s) => s.id === rodada.sistema_id)
+        const snapshot = currentRegras.length
+          ? currentRegras
+          : regras.filter((reg) => reg.sistema_id === rodada.sistema_id)
+        const getRule = (key: string) => snapshot.find((r) => r.chave === key)?.valor_pontos || 0
+
+        const newPts: PontuacaoRodada[] = []
+        const atletasMap = new Map<string, Partial<PontuacaoRodada>>()
+
+        const initAtleta = (id: string) => {
+          if (!id) return null
+          if (!atletasMap.has(id)) {
+            atletasMap.set(id, {
+              rodada_id: rodadaId,
+              atleta_id: id,
+              pontos_grupo: 0,
+              pontos_vitorias: 0,
+              bonus_5x0: 0,
+              pontos_podio_principal: 0,
+              pontos_podio_consolacao: 0,
+              total: 0,
+            })
+          }
+          return atletasMap.get(id)!
+        }
+
+        const rGroups = grupos.filter((g) => g.rodada_id === rodadaId).map((g) => g.id)
+        const rMatches = partidas.filter((p) => rGroups.includes(p.grupo_id))
+
+        rMatches.forEach((p) => {
+          ;[p.atleta1_id, p.atleta2_id, p.atleta3_id, p.atleta4_id].forEach((id) => initAtleta(id))
+          const v1 = p.score1 > p.score2
+          const v2 = p.score2 > p.score1
+          const is5x0_1 = p.score1 === 5 && p.score2 === 0
+          const is5x0_2 = p.score2 === 5 && p.score1 === 0
+
+          const applyPts = (
+            aId: string | null,
+            isWin: boolean,
+            sW: number,
+            sL: number,
+            is5x0: boolean,
+          ) => {
+            const a = initAtleta(aId || '')
+            if (!a) return
+            if (sis?.tipo === 'Geral') {
+              if (isWin) a.pontos_vitorias! += getRule('vitoria')
+              if (is5x0) a.bonus_5x0! += getRule('bonus_5x0')
+            } else {
+              if (isWin) a.pontos_vitorias! += getRule(`vitoria_${sW}x${sL}`)
+            }
+          }
+
+          applyPts(p.atleta1_id, v1, p.score1, p.score2, is5x0_1)
+          applyPts(p.atleta2_id, v1, p.score1, p.score2, is5x0_1)
+          applyPts(p.atleta3_id, v2, p.score2, p.score1, is5x0_2)
+          applyPts(p.atleta4_id, v2, p.score2, p.score1, is5x0_2)
+        })
+
+        const rPodios = podios.filter((p) => p.rodada_id === rodadaId)
+        rPodios.forEach((p) => {
+          const ruleKey = `podio_${p.tipo.toLowerCase()}_${p.posicao}`
+          const pts = getRule(ruleKey)
+
+          const applyPodio = (aId: string | undefined) => {
+            const a = initAtleta(aId || '')
+            if (!a) return
+            if (p.tipo === 'Principal') a.pontos_podio_principal! += pts
+            else a.pontos_podio_consolacao! += pts
+          }
+          applyPodio(p.atleta1_id)
+          applyPodio(p.atleta2_id)
+        })
+
+        atletasMap.forEach((v) => {
+          v.total =
+            (v.pontos_grupo || 0) +
+            (v.pontos_vitorias || 0) +
+            (v.bonus_5x0 || 0) +
+            (v.pontos_podio_principal || 0) +
+            (v.pontos_podio_consolacao || 0)
+          newPts.push({ ...v, id: generateId() } as PontuacaoRodada)
+        })
+
+        return [...filtered, ...newPts]
+      })
+    }, 0)
+  }
+
   return (
     <AppContext.Provider
       value={{
@@ -332,6 +483,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         addPartida,
         updatePartida,
         deletePartida,
+        podios,
+        salvarPodiosRodada,
+        pontuacoes,
+        finalizarRodada,
       }}
     >
       {children}
