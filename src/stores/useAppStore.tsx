@@ -172,19 +172,36 @@ const initialSistemas: SistemaPontuacao[] = [
 ]
 
 const initialRegras: RegraPontuacao[] = [
-  { id: 'r1', sistema_id: 's1', chave: 'vitoria', valor_pontos: 10 },
+  { id: 'r1', sistema_id: 's1', chave: 'pos_1', valor_pontos: 180 },
+  { id: 'r1_2', sistema_id: 's1', chave: 'pos_2', valor_pontos: 170 },
+  { id: 'r1_3', sistema_id: 's1', chave: 'pos_3', valor_pontos: 160 },
+  { id: 'r1_4', sistema_id: 's1', chave: 'pos_4', valor_pontos: 150 },
+  { id: 'r1_5', sistema_id: 's1', chave: 'pos_5', valor_pontos: 140 },
+  { id: 'r1_6', sistema_id: 's1', chave: 'pos_6', valor_pontos: 130 },
+  { id: 'r1_7', sistema_id: 's1', chave: 'pos_7', valor_pontos: 120 },
+  { id: 'r1_8', sistema_id: 's1', chave: 'pos_8', valor_pontos: 110 },
+  { id: 'r1_9', sistema_id: 's1', chave: 'pos_9', valor_pontos: 100 },
+  { id: 'r1_10', sistema_id: 's1', chave: 'pos_10', valor_pontos: 90 },
   { id: 'r2', sistema_id: 's1', chave: 'bonus_5x0', valor_pontos: 5 },
   { id: 'r3', sistema_id: 's1', chave: 'podio_principal_1', valor_pontos: 50 },
-  { id: 'r4', sistema_id: 's1', chave: 'podio_principal_2', valor_pontos: 30 },
-  { id: 'r5', sistema_id: 's1', chave: 'podio_principal_3', valor_pontos: 20 },
-  { id: 'r6', sistema_id: 's1', chave: 'podio_consolacao_1', valor_pontos: 15 },
-  { id: 'r7', sistema_id: 's1', chave: 'podio_consolacao_2', valor_pontos: 10 },
-  { id: 'r8', sistema_id: 's1', chave: 'podio_consolacao_3', valor_pontos: 5 },
-  { id: 'r9', sistema_id: 's2', chave: 'vitoria_5x0', valor_pontos: 20 },
-  { id: 'r10', sistema_id: 's2', chave: 'vitoria_5x1', valor_pontos: 15 },
-  { id: 'r11', sistema_id: 's2', chave: 'vitoria_5x2', valor_pontos: 10 },
-  { id: 'r12', sistema_id: 's2', chave: 'vitoria_5x3', valor_pontos: 8 },
-  { id: 'r13', sistema_id: 's2', chave: 'vitoria_5x4', valor_pontos: 5 },
+  { id: 'r4', sistema_id: 's1', chave: 'podio_principal_2', valor_pontos: 40 },
+  { id: 'r5', sistema_id: 's1', chave: 'podio_principal_3', valor_pontos: 30 },
+  { id: 'r6', sistema_id: 's1', chave: 'podio_consolacao_1', valor_pontos: 30 },
+  { id: 'r7', sistema_id: 's1', chave: 'podio_consolacao_2', valor_pontos: 20 },
+  { id: 'r8', sistema_id: 's1', chave: 'podio_consolacao_3', valor_pontos: 10 },
+  { id: 'r9', sistema_id: 's2', chave: 'vitoria_5x0', valor_pontos: 100 },
+  { id: 'r10', sistema_id: 's2', chave: 'vitoria_4x1', valor_pontos: 80 },
+  { id: 'r11', sistema_id: 's2', chave: 'vitoria_3x2', valor_pontos: 60 },
+  { id: 'r12', sistema_id: 's2', chave: 'derrota_2x3', valor_pontos: 40 },
+  { id: 'r13', sistema_id: 's2', chave: 'derrota_1x4', valor_pontos: 30 },
+  { id: 'r14', sistema_id: 's2', chave: 'derrota_0x5', valor_pontos: 20 },
+  { id: 'r15', sistema_id: 's2', chave: 'bonus_5x0', valor_pontos: 5 },
+  { id: 'r16', sistema_id: 's2', chave: 'podio_principal_1', valor_pontos: 50 },
+  { id: 'r17', sistema_id: 's2', chave: 'podio_principal_2', valor_pontos: 40 },
+  { id: 'r18', sistema_id: 's2', chave: 'podio_principal_3', valor_pontos: 30 },
+  { id: 'r19', sistema_id: 's2', chave: 'podio_consolacao_1', valor_pontos: 30 },
+  { id: 'r20', sistema_id: 's2', chave: 'podio_consolacao_2', valor_pontos: 20 },
+  { id: 'r21', sistema_id: 's2', chave: 'podio_consolacao_3', valor_pontos: 10 },
 ]
 
 const initialRodadas: Rodada[] = [
@@ -298,6 +315,8 @@ interface AppState {
     s: Omit<SistemaPontuacao, 'id'>,
     r: Omit<RegraPontuacao, 'id' | 'sistema_id'>[],
   ) => void
+  updateSistema: (id: string, s: Partial<SistemaPontuacao>) => void
+  updateRegrasSistema: (sistema_id: string, r: Omit<RegraPontuacao, 'id' | 'sistema_id'>[]) => void
   regras: RegraPontuacao[]
   rodadas: Rodada[]
   addRodada: (r: Omit<Rodada, 'id'>) => void
@@ -392,6 +411,21 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       ...prev,
       ...novasRegras.map((r) => ({ ...r, id: generateId(), sistema_id: sisId })),
     ])
+  }
+
+  const updateSistema = (id: string, sistema: Partial<SistemaPontuacao>) => {
+    setSistemas((prev) => prev.map((s) => (s.id === id ? { ...s, ...sistema } : s)))
+  }
+
+  const updateRegrasSistema = (
+    sistema_id: string,
+    novasRegras: Omit<RegraPontuacao, 'id' | 'sistema_id'>[],
+  ) => {
+    setRegras((prev) => {
+      const filtered = prev.filter((r) => r.sistema_id !== sistema_id)
+      const mapped = novasRegras.map((r) => ({ ...r, id: generateId(), sistema_id }))
+      return [...filtered, ...mapped]
+    })
   }
 
   const addRodada = (r: Omit<Rodada, 'id'>) =>
@@ -489,7 +523,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               if (isWin) a.pontos_vitorias! += getRule('vitoria')
               if (is5x0) a.bonus_5x0! += getRule('bonus_5x0')
             } else {
-              if (isWin) a.pontos_vitorias! += getRule(`vitoria_${sW}x${sL}`)
+              if (isWin) {
+                a.pontos_vitorias! += getRule(`vitoria_${sW}x${sL}`)
+                if (is5x0) a.bonus_5x0! += getRule('bonus_5x0')
+              } else {
+                a.pontos_vitorias! += getRule(`derrota_${sW}x${sL}`)
+              }
             }
           }
 
@@ -566,6 +605,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         getAtletaLigas,
         sistemas,
         addSistema,
+        updateSistema,
+        updateRegrasSistema,
         regras,
         rodadas,
         addRodada,
