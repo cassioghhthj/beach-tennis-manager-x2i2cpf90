@@ -10,6 +10,8 @@ import Dashboard from './pages/admin/Dashboard'
 import Ligas from './pages/admin/Ligas'
 import Atletas from './pages/admin/Atletas'
 import Sistemas from './pages/admin/Sistemas'
+import Rodadas from './pages/admin/Rodadas'
+import RodadaDetalhes from './pages/admin/RodadaDetalhes'
 import Placeholder from './pages/admin/Placeholder'
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -39,8 +41,9 @@ const AppRoutes = () => (
           <Route path="ligas" element={<Ligas />} />
           <Route path="atletas" element={<Atletas />} />
           <Route path="sistemas" element={<Sistemas />} />
-          <Route path="rodadas" element={<Placeholder title="Rodadas" />} />
-          <Route path="resultados" element={<Placeholder title="Lançar Resultados" />} />
+          <Route path="rodadas" element={<Rodadas />} />
+          <Route path="rodadas/:id" element={<RodadaDetalhes />} />
+          <Route path="resultados" element={<Navigate to="/admin/rodadas" replace />} />
           <Route path="auditoria" element={<Placeholder title="Auditoria de Pontuação" />} />
           <Route path="ranking" element={<Placeholder title="Ranking Geral" />} />
         </Route>

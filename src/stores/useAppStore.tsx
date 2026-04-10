@@ -42,6 +42,54 @@ export interface RegraPontuacao {
   valor_pontos: number
 }
 
+export type RodadaStatus =
+  | 'Draft'
+  | 'In Progress'
+  | 'Partially Finalized'
+  | 'Round Finalized'
+  | 'Published'
+
+export interface Rodada {
+  id: string
+  liga_id: string
+  numero: string
+  data: string
+  hora: string
+  local: string
+  sistema_id: string
+  status: RodadaStatus
+  observacoes: string
+}
+
+export interface Grupo {
+  id: string
+  rodada_id: string
+  nome: string
+  finalizado: boolean
+}
+
+export type GrupoAtletaStatus = 'Active' | 'Withdrawn' | 'Substituted'
+
+export interface GrupoAtleta {
+  id: string
+  grupo_id: string
+  atleta_id: string
+  status: GrupoAtletaStatus
+  substituido_por_id?: string
+  motivo_substituicao?: string
+}
+
+export interface Partida {
+  id: string
+  grupo_id: string
+  atleta1_id: string
+  atleta2_id: string
+  score1: number
+  atleta3_id: string
+  atleta4_id: string
+  score2: number
+}
+
 const generateId = () => Math.random().toString(36).substring(2, 11)
 
 const initialLigas: Liga[] = [
@@ -65,25 +113,15 @@ const initialLigas: Liga[] = [
     descricao: 'Liga feminina',
     observacoes: '',
   },
-  {
-    id: '3',
-    nome: 'Liga Dinossauros',
-    categoria: 'C',
-    temporada: '2023/2',
-    total_rodadas: 12,
-    status: 'Inativo',
-    descricao: 'Liga veteranos',
-    observacoes: '',
-  },
 ]
 
-const initialAtletas: Atleta[] = Array.from({ length: 15 }).map((_, i) => ({
+const initialAtletas: Atleta[] = Array.from({ length: 12 }).map((_, i) => ({
   id: `a${i + 1}`,
   nome_completo: `Atleta ${i + 1}`,
   telefone: '(11) 99999-9999',
   sexo: i % 2 === 0 ? 'M' : 'F',
-  categoria_principal: ['Iniciante', 'D', 'C', 'B', 'A'][i % 5],
-  status: i % 4 === 0 ? 'Inativo' : 'Ativo',
+  categoria_principal: 'D',
+  status: 'Ativo',
   observacoes: '',
   avatar_url: `https://img.usecurling.com/ppl/thumbnail?gender=${i % 2 === 0 ? 'male' : 'female'}&seed=${i}`,
 }))
@@ -91,18 +129,51 @@ const initialAtletas: Atleta[] = Array.from({ length: 15 }).map((_, i) => ({
 const initialAtletaLigas: AtletaLiga[] = initialAtletas.map((a) => ({
   id: generateId(),
   atleta_id: a.id,
-  liga_id: initialLigas[Math.floor(Math.random() * initialLigas.length)].id,
+  liga_id: '1',
 }))
 
 const initialSistemas: SistemaPontuacao[] = [
   { id: 's1', nome: 'Sistema Geral Pro', tipo: 'Geral', ativo: true },
-  { id: 's2', nome: 'Sistema Vitórias Padrão', tipo: 'Vitorias', ativo: false },
 ]
 
 const initialRegras: RegraPontuacao[] = [
-  { id: generateId(), sistema_id: 's1', chave: '1_lugar', valor_pontos: 100 },
-  { id: generateId(), sistema_id: 's1', chave: 'vitoria_5x0', valor_pontos: 10 },
-  { id: generateId(), sistema_id: 's2', chave: 'vitoria_5x0', valor_pontos: 50 },
+  { id: generateId(), sistema_id: 's1', chave: 'vitoria', valor_pontos: 10 },
+]
+
+const initialRodadas: Rodada[] = [
+  {
+    id: 'r1',
+    liga_id: '1',
+    numero: 'R1',
+    data: '2023-10-15',
+    hora: '08:00',
+    local: 'Arena Beach',
+    sistema_id: 's1',
+    status: 'In Progress',
+    observacoes: '',
+  },
+]
+
+const initialGrupos: Grupo[] = [{ id: 'g1', rodada_id: 'r1', nome: 'Grupo A', finalizado: false }]
+
+const initialGrupoAtletas: GrupoAtleta[] = [
+  { id: 'ga1', grupo_id: 'g1', atleta_id: 'a1', status: 'Active' },
+  { id: 'ga2', grupo_id: 'g1', atleta_id: 'a2', status: 'Active' },
+  { id: 'ga3', grupo_id: 'g1', atleta_id: 'a3', status: 'Active' },
+  { id: 'ga4', grupo_id: 'g1', atleta_id: 'a4', status: 'Active' },
+]
+
+const initialPartidas: Partida[] = [
+  {
+    id: 'p1',
+    grupo_id: 'g1',
+    atleta1_id: 'a1',
+    atleta2_id: 'a2',
+    score1: 6,
+    atleta3_id: 'a3',
+    atleta4_id: 'a4',
+    score2: 4,
+  },
 ]
 
 interface AppState {
@@ -123,6 +194,22 @@ interface AppState {
     r: Omit<RegraPontuacao, 'id' | 'sistema_id'>[],
   ) => void
   regras: RegraPontuacao[]
+  rodadas: Rodada[]
+  addRodada: (r: Omit<Rodada, 'id'>) => void
+  updateRodada: (id: string, r: Partial<Rodada>) => void
+  deleteRodada: (id: string) => void
+  grupos: Grupo[]
+  addGrupo: (g: Omit<Grupo, 'id'>) => void
+  updateGrupo: (id: string, g: Partial<Grupo>) => void
+  deleteGrupo: (id: string) => void
+  grupoAtletas: GrupoAtleta[]
+  addGrupoAtleta: (ga: Omit<GrupoAtleta, 'id'>) => void
+  updateGrupoAtleta: (id: string, ga: Partial<GrupoAtleta>) => void
+  deleteGrupoAtleta: (id: string) => void
+  partidas: Partida[]
+  addPartida: (p: Omit<Partida, 'id'>) => void
+  updatePartida: (id: string, p: Partial<Partida>) => void
+  deletePartida: (id: string) => void
 }
 
 const AppContext = createContext<AppState | undefined>(undefined)
@@ -134,6 +221,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [atletaLigas, setAtletaLigas] = useState<AtletaLiga[]>(initialAtletaLigas)
   const [sistemas, setSistemas] = useState<SistemaPontuacao[]>(initialSistemas)
   const [regras, setRegras] = useState<RegraPontuacao[]>(initialRegras)
+  const [rodadas, setRodadas] = useState<Rodada[]>(initialRodadas)
+  const [grupos, setGrupos] = useState<Grupo[]>(initialGrupos)
+  const [grupoAtletas, setGrupoAtletas] = useState<GrupoAtleta[]>(initialGrupoAtletas)
+  const [partidas, setPartidas] = useState<Partida[]>(initialPartidas)
 
   const login = () => setIsAuthenticated(true)
   const logout = () => setIsAuthenticated(false)
@@ -183,6 +274,31 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     ])
   }
 
+  const addRodada = (r: Omit<Rodada, 'id'>) =>
+    setRodadas((prev) => [{ ...r, id: generateId() }, ...prev])
+  const updateRodada = (id: string, r: Partial<Rodada>) =>
+    setRodadas((prev) => prev.map((item) => (item.id === id ? { ...item, ...r } : item)))
+  const deleteRodada = (id: string) => setRodadas((prev) => prev.filter((item) => item.id !== id))
+
+  const addGrupo = (g: Omit<Grupo, 'id'>) =>
+    setGrupos((prev) => [...prev, { ...g, id: generateId() }])
+  const updateGrupo = (id: string, g: Partial<Grupo>) =>
+    setGrupos((prev) => prev.map((item) => (item.id === id ? { ...item, ...g } : item)))
+  const deleteGrupo = (id: string) => setGrupos((prev) => prev.filter((item) => item.id !== id))
+
+  const addGrupoAtleta = (ga: Omit<GrupoAtleta, 'id'>) =>
+    setGrupoAtletas((prev) => [...prev, { ...ga, id: generateId() }])
+  const updateGrupoAtleta = (id: string, ga: Partial<GrupoAtleta>) =>
+    setGrupoAtletas((prev) => prev.map((item) => (item.id === id ? { ...item, ...ga } : item)))
+  const deleteGrupoAtleta = (id: string) =>
+    setGrupoAtletas((prev) => prev.filter((item) => item.id !== id))
+
+  const addPartida = (p: Omit<Partida, 'id'>) =>
+    setPartidas((prev) => [...prev, { ...p, id: generateId() }])
+  const updatePartida = (id: string, p: Partial<Partida>) =>
+    setPartidas((prev) => prev.map((item) => (item.id === id ? { ...item, ...p } : item)))
+  const deletePartida = (id: string) => setPartidas((prev) => prev.filter((item) => item.id !== id))
+
   return (
     <AppContext.Provider
       value={{
@@ -200,6 +316,22 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         sistemas,
         addSistema,
         regras,
+        rodadas,
+        addRodada,
+        updateRodada,
+        deleteRodada,
+        grupos,
+        addGrupo,
+        updateGrupo,
+        deleteGrupo,
+        grupoAtletas,
+        addGrupoAtleta,
+        updateGrupoAtleta,
+        deleteGrupoAtleta,
+        partidas,
+        addPartida,
+        updatePartida,
+        deletePartida,
       }}
     >
       {children}
