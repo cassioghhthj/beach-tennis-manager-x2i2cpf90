@@ -243,13 +243,13 @@ export default function Sistemas() {
 
       <Dialog open={!!editingId} onOpenChange={(open) => !open && setEditingId(null)}>
         <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0 gap-0">
-          <DialogHeader className="p-6 pb-4">
+          <DialogHeader className="p-6 pb-4 border-b">
             <DialogTitle>Editar Sistema: {editingSistema?.nome}</DialogTitle>
             <DialogDescription>Modifique as regras de pontuação abaixo.</DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 px-6">
-            <div className="space-y-6 pb-6">
+          <ScrollArea className="flex-1 px-6" type="always">
+            <div className="space-y-6 py-4 pr-2">
               <div className="space-y-2">
                 <Label>Nome do Sistema</Label>
                 <Input
@@ -278,7 +278,7 @@ export default function Sistemas() {
               ) : (
                 <div className="space-y-4">
                   <h4 className="font-semibold border-b pb-2">Pontos por Placar (Vitórias)</h4>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                     {[
                       { k: 'vitoria_5x0', l: 'Vitória de 5x0' },
                       { k: 'vitoria_4x1', l: 'Vitória de 4x1' },
@@ -302,7 +302,7 @@ export default function Sistemas() {
 
               <div className="space-y-4">
                 <h4 className="font-semibold border-b pb-2">Podio Principal</h4>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                   {[1, 2, 3].map((pos) => (
                     <div key={`pp_${pos}`} className="space-y-1">
                       <Label className="text-xs">{pos} Lugar</Label>
@@ -318,7 +318,7 @@ export default function Sistemas() {
 
               <div className="space-y-4">
                 <h4 className="font-semibold border-b pb-2">Podio Consolação</h4>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                   {[1, 2, 3].map((pos) => (
                     <div key={`pc_${pos}`} className="space-y-1">
                       <Label className="text-xs">{pos} Lugar</Label>
@@ -334,7 +334,7 @@ export default function Sistemas() {
 
               <div className="space-y-4">
                 <h4 className="font-semibold border-b pb-2">Bônus Adicionais</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                   <div className="space-y-1">
                     <Label className="text-xs">Pontos Bônus (5x0)</Label>
                     <Input
