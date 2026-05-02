@@ -3,13 +3,24 @@ import useAppStore, { Grupo, Rodada } from '@/stores/useAppStore'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Lock, Unlock } from 'lucide-react'
+import { Lock, Unlock, Trash2 } from 'lucide-react'
 import GrupoAtletasList from './GrupoAtletasList'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import GrupoPartidasList from './GrupoPartidasList'
 import GrupoClassificacao from './GrupoClassificacao'
 
 export default function GrupoCard({ grupo, rodada }: { grupo: Grupo; rodada: Rodada }) {
-  const { updateGrupo } = useAppStore()
+  const { updateGrupo, deleteGrupo } = useAppStore()
 
   const isRoundLocked = rodada.status === 'Round Finalized' || rodada.status === 'Published'
   const isFinalizado = grupo.finalizado || isRoundLocked
@@ -33,7 +44,39 @@ export default function GrupoCard({ grupo, rodada }: { grupo: Grupo; rodada: Rod
           <CardTitle className="text-xl font-heading">{grupo.nome}</CardTitle>
           {grupo.finalizado && <Badge className="bg-green-500 text-white">Finalizado</Badge>}
         </div>
-        <div>
+        <div className="flex items-center gap-2">
+          {!grupo.finalizado && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                  disabled={isRoundLocked}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Excluir Grupo</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Deseja realmente excluir o grupo? Esta ação é permanente e todos os dados
+                    vinculados a este grupo serão perdidos.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => deleteGrupo(grupo.id)}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Confirmar
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
           {!grupo.finalizado ? (
             <Button
               variant="default"
