@@ -19,7 +19,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Star, Copy, Pencil, Info } from 'lucide-react'
 import useAppStore, { SistemaPontuacao } from '@/stores/useAppStore'
 import { toast } from 'sonner'
@@ -242,14 +241,14 @@ export default function Sistemas() {
       </div>
 
       <Dialog open={!!editingId} onOpenChange={(open) => !open && setEditingId(null)}>
-        <DialogContent className="max-w-2xl max-h-[95vh] sm:max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
+        <DialogContent className="max-w-2xl max-h-[90vh] sm:max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
           <DialogHeader className="p-6 pb-4 border-b shrink-0">
             <DialogTitle>Editar Sistema: {editingSistema?.nome}</DialogTitle>
             <DialogDescription>Modifique as regras de pontuação abaixo.</DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 w-full" type="always">
-            <div className="space-y-6 py-4 px-6 pr-8">
+          <div className="flex-1 w-full overflow-y-auto" style={{ scrollbarGutter: 'stable' }}>
+            <div className="space-y-6 py-4 px-6">
               <div className="space-y-2">
                 <Label>Nome do Sistema</Label>
                 <Input
@@ -346,9 +345,9 @@ export default function Sistemas() {
                 </div>
               </div>
             </div>
-          </ScrollArea>
+          </div>
 
-          <DialogFooter className="p-6 pt-4 border-t shrink-0">
+          <DialogFooter className="p-6 pt-4 border-t shrink-0 bg-background z-10">
             <Button variant="outline" onClick={() => setEditingId(null)}>
               Cancelar
             </Button>
