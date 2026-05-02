@@ -36,6 +36,16 @@ const defaultGeralKeys = {
   pos_8: 110,
   pos_9: 100,
   pos_10: 90,
+  pos_11: 80,
+  pos_12: 70,
+  pos_13: 60,
+  pos_14: 50,
+  pos_15: 40,
+  pos_16: 30,
+  pos_17: 20,
+  pos_18: 10,
+  pos_19: 5,
+  pos_20: 0,
   bonus_5x0: 5,
   podio_principal_1: 50,
   podio_principal_2: 40,
@@ -253,9 +263,9 @@ export default function Sistemas() {
                 <div className="space-y-4">
                   <h4 className="font-semibold border-b pb-2">Pontuação por Posição (Ranking)</h4>
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                    {Array.from({ length: 10 }).map((_, i) => (
+                    {Array.from({ length: 20 }).map((_, i) => (
                       <div key={`pos_${i + 1}`} className="space-y-1">
-                        <Label className="text-xs">{i + 1} Lugar</Label>
+                        <Label className="text-xs">{i + 1}º Lugar</Label>
                         <Input
                           type="number"
                           value={formData[`pos_${i + 1}`] ?? ''}
@@ -326,7 +336,7 @@ export default function Sistemas() {
                 <h4 className="font-semibold border-b pb-2">Bônus Adicionais</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <Label className="text-xs">Bonus 5x0</Label>
+                    <Label className="text-xs">Pontos Bônus (5x0)</Label>
                     <Input
                       type="number"
                       value={formData['bonus_5x0'] ?? ''}

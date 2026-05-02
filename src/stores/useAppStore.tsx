@@ -182,6 +182,16 @@ const initialRegras: RegraPontuacao[] = [
   { id: 'r1_8', sistema_id: 's1', chave: 'pos_8', valor_pontos: 110 },
   { id: 'r1_9', sistema_id: 's1', chave: 'pos_9', valor_pontos: 100 },
   { id: 'r1_10', sistema_id: 's1', chave: 'pos_10', valor_pontos: 90 },
+  { id: 'r1_11', sistema_id: 's1', chave: 'pos_11', valor_pontos: 80 },
+  { id: 'r1_12', sistema_id: 's1', chave: 'pos_12', valor_pontos: 70 },
+  { id: 'r1_13', sistema_id: 's1', chave: 'pos_13', valor_pontos: 60 },
+  { id: 'r1_14', sistema_id: 's1', chave: 'pos_14', valor_pontos: 50 },
+  { id: 'r1_15', sistema_id: 's1', chave: 'pos_15', valor_pontos: 40 },
+  { id: 'r1_16', sistema_id: 's1', chave: 'pos_16', valor_pontos: 30 },
+  { id: 'r1_17', sistema_id: 's1', chave: 'pos_17', valor_pontos: 20 },
+  { id: 'r1_18', sistema_id: 's1', chave: 'pos_18', valor_pontos: 10 },
+  { id: 'r1_19', sistema_id: 's1', chave: 'pos_19', valor_pontos: 5 },
+  { id: 'r1_20', sistema_id: 's1', chave: 'pos_20', valor_pontos: 0 },
   { id: 'r2', sistema_id: 's1', chave: 'bonus_5x0', valor_pontos: 5 },
   { id: 'r3', sistema_id: 's1', chave: 'podio_principal_1', valor_pontos: 50 },
   { id: 'r4', sistema_id: 's1', chave: 'podio_principal_2', valor_pontos: 40 },
@@ -482,6 +492,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
         const newPts: PontuacaoRodada[] = []
         const atletasMap = new Map<string, Partial<PontuacaoRodada>>()
+        const statsMap = new Map<string, { wins: number; saldo: number }>()
 
         const initAtleta = (id: string) => {
           if (!id) return null
@@ -501,14 +512,43 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         }
 
         const rGroups = grupos.filter((g) => g.rodada_id === rodadaId).map((g) => g.id)
+        const initStats = (id: string) => {
+          if (!id) return null
+          if (!statsMap.has(id)) statsMap.set(id, { wins: 0, saldo: 0 })
+          return statsMap.get(id)!
+        }
+
+        const rGroups = grupos.filter((g) => g.rodada_id === rodadaId).map((g) => g.id)
         const rMatches = partidas.filter((p) => rGroups.includes(p.grupo_id))
 
         rMatches.forEach((p) => {
           ;[p.atleta1_id, p.atleta2_id, p.atleta3_id, p.atleta4_id].forEach((id) => initAtleta(id))
+
+          const p1 = initStats(p.atleta1_id)
+          const p2 = initStats(p.atleta2_id)
+          const p3 = initStats(p.atleta3_id)
+          const p4 = initStats(p.atleta4_id)
+
           const v1 = p.score1 > p.score2
           const v2 = p.score2 > p.score1
           const is5x0_1 = p.score1 === 5 && p.score2 === 0
           const is5x0_2 = p.score2 === 5 && p.score1 === 0
+
+          const updateStats = (
+            st: { wins: number; saldo: number } | null,
+            isWin: boolean,
+            ptsWon: number,
+            ptsLost: number,
+          ) => {
+            if (!st) return
+            if (isWin) st.wins += 1
+            st.saldo += ptsWon - ptsLost
+          }
+
+          updateStats(p1, v1, p.score1, p.score2)
+          updateStats(p2, v1, p.score1, p.score2)
+          updateStats(p3, v2, p.score2, p.score1)
+          updateStats(p4, v2, p.score2, p.score1)
 
           const applyPts = (
             aId: string | null,
@@ -537,6 +577,20 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           applyPts(p.atleta3_id, v2, p.score2, p.score1, is5x0_2)
           applyPts(p.atleta4_id, v2, p.score2, p.score1, is5x0_2)
         })
+
+        if (sis?.tipo === 'Geral') {
+          const rankedAthletes = Array.from(statsMap.entries())
+            .sort((a, b) => b[1].wins - a[1].wins || b[1].saldo - a[1].saldo)
+            .map((e) => e[0])
+
+          rankedAthletes.forEach((aId, idx) => {
+            const a = initAtleta(aId)
+            if (a) {
+              const pos = idx + 1
+              a.pontos_grupo = getRule(`pos_${pos}`) || 0
+            }
+          })
+        }
 
         const rPodios = podios.filter((p) => p.rodada_id === rodadaId)
         rPodios.forEach((p) => {
