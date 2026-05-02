@@ -518,7 +518,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           return statsMap.get(id)!
         }
 
-        const rGroups = grupos.filter((g) => g.rodada_id === rodadaId).map((g) => g.id)
         const rMatches = partidas.filter((p) => rGroups.includes(p.grupo_id))
 
         rMatches.forEach((p) => {
