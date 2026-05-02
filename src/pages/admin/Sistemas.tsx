@@ -242,14 +242,14 @@ export default function Sistemas() {
       </div>
 
       <Dialog open={!!editingId} onOpenChange={(open) => !open && setEditingId(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0 gap-0">
-          <DialogHeader className="p-6 pb-4 border-b">
+        <DialogContent className="max-w-2xl max-h-[95vh] sm:max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
+          <DialogHeader className="p-6 pb-4 border-b shrink-0">
             <DialogTitle>Editar Sistema: {editingSistema?.nome}</DialogTitle>
             <DialogDescription>Modifique as regras de pontuação abaixo.</DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 px-6" type="always">
-            <div className="space-y-6 py-4 pr-2">
+          <ScrollArea className="flex-1 w-full" type="always">
+            <div className="space-y-6 py-4 px-6 pr-8">
               <div className="space-y-2">
                 <Label>Nome do Sistema</Label>
                 <Input
@@ -348,7 +348,7 @@ export default function Sistemas() {
             </div>
           </ScrollArea>
 
-          <DialogFooter className="p-6 pt-4 border-t">
+          <DialogFooter className="p-6 pt-4 border-t shrink-0">
             <Button variant="outline" onClick={() => setEditingId(null)}>
               Cancelar
             </Button>
