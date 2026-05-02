@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import useAppStore from '@/stores/useAppStore'
 import { Button } from '@/components/ui/button'
@@ -8,6 +8,14 @@ import { Badge } from '@/components/ui/badge'
 import GrupoCard from '@/components/admin/GrupoCard'
 import PodioConfig from '@/components/admin/PodioConfig'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useToast } from '@/hooks/use-toast'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -30,6 +38,12 @@ export default function RodadaDetalhes() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { rodadas, grupos, addGrupo, updateRodada, finalizarRodada } = useAppStore()
+  const { toast } = useToast()
+
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
+  const [transitionDirection, setTransitionDirection] = useState<'forward' | 'backward' | null>(
+    null,
+  )
 
   const rodada = useMemo(() => rodadas.find((r) => r.id === id), [rodadas, id])
   const rodadaGrupos = useMemo(() => grupos.filter((g) => g.rodada_id === id), [grupos, id])
@@ -49,14 +63,55 @@ export default function RodadaDetalhes() {
     Published: 'Published',
   }
 
-  const advanceStatus = () => {
-    const next = nextStatusMap[rodada.status]
-    if (next === 'Round Finalized') {
+  const prevStatusMap: Record<string, any> = {
+    Published: 'Round Finalized',
+    'Round Finalized': 'Partially Finalized',
+    'Partially Finalized': 'In Progress',
+    'In Progress': 'Draft',
+    Draft: 'Draft',
+  }
+
+  const statusTranslations: Record<string, string> = {
+    Draft: 'Rascunho',
+    'In Progress': 'Em Andamento',
+    'Partially Finalized': 'Parcialmente Finalizada',
+    'Round Finalized': 'Rodada Finalizada',
+    Published: 'Publicada',
+  }
+
+  const handleStatusChangeClick = (direction: 'forward' | 'backward') => {
+    setTransitionDirection(direction)
+    setConfirmDialogOpen(true)
+  }
+
+  const confirmStatusChange = () => {
+    if (!rodada || !transitionDirection) return
+
+    const isForward = transitionDirection === 'forward'
+    const nextStatus = isForward ? nextStatusMap[rodada.status] : prevStatusMap[rodada.status]
+
+    if (nextStatus === rodada.status) {
+      setConfirmDialogOpen(false)
+      return
+    }
+
+    if (isForward && nextStatus === 'Round Finalized') {
       finalizarRodada(rodada.id)
     } else {
-      updateRodada(rodada.id, { status: next })
+      updateRodada(rodada.id, { status: nextStatus })
     }
+
+    toast({
+      title: 'Status atualizado',
+      description: `O status da rodada foi alterado para ${statusTranslations[nextStatus] || nextStatus}.`,
+    })
+
+    setConfirmDialogOpen(false)
+    setTransitionDirection(null)
   }
+
+  const previewNextStatus =
+    transitionDirection === 'forward' ? nextStatusMap[rodada.status] : prevStatusMap[rodada.status]
 
   return (
     <div className="space-y-6">
@@ -69,7 +124,7 @@ export default function RodadaDetalhes() {
             <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
               Rodada {rodada.numero}
               <Badge variant="outline" className={getStatusColor(rodada.status)}>
-                {rodada.status}
+                {statusTranslations[rodada.status] || rodada.status}
               </Badge>
             </h1>
             <p className="text-muted-foreground">
@@ -77,13 +132,20 @@ export default function RodadaDetalhes() {
             </p>
           </div>
         </div>
-        <div className="flex items-center space-x-2 w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto mt-4 sm:mt-0">
+          {rodada.status !== 'Draft' && (
+            <Button variant="outline" onClick={() => handleStatusChangeClick('backward')}>
+              Voltar Status
+            </Button>
+          )}
           {rodada.status === 'Round Finalized' && (
             <Button variant="outline" onClick={() => finalizarRodada(rodada.id)}>
               <Calculator className="mr-2 h-4 w-4" /> Recalcular Pontuação
             </Button>
           )}
-          {rodada.status !== 'Published' && <Button onClick={advanceStatus}>Avançar Status</Button>}
+          {rodada.status !== 'Published' && (
+            <Button onClick={() => handleStatusChangeClick('forward')}>Avançar Status</Button>
+          )}
         </div>
       </div>
 
@@ -128,6 +190,32 @@ export default function RodadaDetalhes() {
           <PodioConfig rodada={rodada} />
         </TabsContent>
       </Tabs>
+
+      <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar Mudança de Status</DialogTitle>
+            <DialogDescription>
+              Deseja realmente {transitionDirection === 'forward' ? 'avançar' : 'voltar'} o status
+              de{' '}
+              <strong className="text-foreground">
+                {statusTranslations[rodada.status] || rodada.status}
+              </strong>{' '}
+              para{' '}
+              <strong className="text-foreground">
+                {statusTranslations[previewNextStatus] || previewNextStatus}
+              </strong>
+              ?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setConfirmDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={confirmStatusChange}>Confirmar</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

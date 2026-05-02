@@ -11,7 +11,8 @@ import GrupoClassificacao from './GrupoClassificacao'
 export default function GrupoCard({ grupo, rodada }: { grupo: Grupo; rodada: Rodada }) {
   const { updateGrupo } = useAppStore()
 
-  const isFinalizado = grupo.finalizado
+  const isRoundLocked = rodada.status === 'Round Finalized' || rodada.status === 'Published'
+  const isFinalizado = grupo.finalizado || isRoundLocked
 
   const handleFinalize = () => {
     updateGrupo(grupo.id, { finalizado: true })
@@ -25,25 +26,26 @@ export default function GrupoCard({ grupo, rodada }: { grupo: Grupo; rodada: Rod
 
   return (
     <Card
-      className={`border-border/50 transition-colors ${isFinalizado ? 'border-green-500/50 bg-green-500/5' : ''}`}
+      className={`border-border/50 transition-colors ${grupo.finalizado ? 'border-green-500/50 bg-green-500/5' : ''}`}
     >
       <CardHeader className="flex flex-row items-center justify-between pb-2 border-b">
         <div className="flex items-center space-x-2">
           <CardTitle className="text-xl font-heading">{grupo.nome}</CardTitle>
-          {isFinalizado && <Badge className="bg-green-500 text-white">Finalizado</Badge>}
+          {grupo.finalizado && <Badge className="bg-green-500 text-white">Finalizado</Badge>}
         </div>
         <div>
-          {!isFinalizado ? (
+          {!grupo.finalizado ? (
             <Button
               variant="default"
               size="sm"
               onClick={handleFinalize}
               className="bg-green-600 text-white hover:bg-green-700"
+              disabled={isRoundLocked}
             >
               <Lock className="mr-2 h-4 w-4" /> Finalizar Grupo
             </Button>
           ) : (
-            <Button variant="outline" size="sm" onClick={handleReopen}>
+            <Button variant="outline" size="sm" onClick={handleReopen} disabled={isRoundLocked}>
               <Unlock className="mr-2 h-4 w-4" /> Reabrir Grupo
             </Button>
           )}
