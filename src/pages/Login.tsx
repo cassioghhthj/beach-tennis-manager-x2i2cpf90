@@ -12,7 +12,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Trophy } from 'lucide-react'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -36,14 +35,23 @@ export default function Login() {
     >
       <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"></div>
       <Card className="w-full max-w-md shadow-2xl bg-background/95 backdrop-blur-sm border-0 relative z-10 animate-fade-in-up">
-        <CardHeader className="space-y-3 text-center pb-8">
-          <div className="mx-auto bg-primary/20 w-16 h-16 flex items-center justify-center rounded-full mb-2">
-            <Trophy className="h-8 w-8 text-primary" />
+        <CardHeader className="space-y-4 text-center pb-8">
+          <div className="mx-auto w-32 h-32 flex items-center justify-center mb-2">
+            <img
+              src="/logo.png"
+              alt="Arena Beach Luiziana Logo"
+              className="w-full h-full object-contain drop-shadow-md"
+              onError={(e) => {
+                e.currentTarget.src = 'https://img.usecurling.com/i?q=tennis&color=yellow'
+              }}
+            />
           </div>
           <CardTitle className="text-3xl font-heading font-extrabold uppercase text-foreground tracking-tight drop-shadow-sm">
             Arena Beach
           </CardTitle>
-          <CardDescription className="text-base">Gestão de Ligas • Luiziana</CardDescription>
+          <CardDescription className="text-base font-medium text-primary uppercase tracking-wider">
+            Gestão de Ligas • Luiziana
+          </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-5">

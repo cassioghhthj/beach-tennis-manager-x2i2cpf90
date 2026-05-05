@@ -60,14 +60,23 @@ export default function AdminLayout() {
         <Sidebar className="border-r border-sidebar-border shadow-sm">
           <SidebarHeader className="p-4 border-b border-sidebar-border">
             <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold shadow-md">
-                AB
+              <div className="flex h-10 w-10 items-center justify-center rounded-md overflow-hidden bg-background shadow-sm p-1">
+                <img
+                  src="/logo.png"
+                  alt="Arena Beach"
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    e.currentTarget.src = 'https://img.usecurling.com/i?q=tennis&color=yellow'
+                  }}
+                />
               </div>
               <div className="flex flex-col">
-                <span className="font-heading font-bold uppercase tracking-tight text-sidebar-foreground">
+                <span className="font-heading font-bold uppercase tracking-tight text-sidebar-foreground text-sm">
                   Arena Beach
                 </span>
-                <span className="text-xs text-sidebar-foreground/70">Luiziana</span>
+                <span className="text-xs text-primary font-bold tracking-wider uppercase">
+                  Luiziana
+                </span>
               </div>
             </div>
           </SidebarHeader>
