@@ -3,6 +3,7 @@ import { Toaster } from '@/components/ui/toaster'
 import { Toaster as Sonner } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import useAppStore, { AppProvider } from '@/stores/useAppStore'
+import { AuthProvider, useAuth } from '@/hooks/use-auth'
 import NotFound from './pages/NotFound'
 import Login from './pages/Login'
 import Index from './pages/Index'
@@ -18,9 +19,10 @@ import Ranking from './pages/admin/Ranking'
 import HistoricoPublicacoes from './pages/admin/HistoricoPublicacoes'
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated } = useAppStore()
+  const { user, loading } = useAuth()
   const location = useLocation()
-  if (!isAuthenticated) return <Navigate to="/login" state={{ from: location }} replace />
+  if (loading) return null
+  if (!user) return <Navigate to="/login" state={{ from: location }} replace />
   return children
 }
 
@@ -58,9 +60,11 @@ const AppRoutes = () => (
 )
 
 const App = () => (
-  <AppProvider>
-    <AppRoutes />
-  </AppProvider>
+  <AuthProvider>
+    <AppProvider>
+      <AppRoutes />
+    </AppProvider>
+  </AuthProvider>
 )
 
 export default App

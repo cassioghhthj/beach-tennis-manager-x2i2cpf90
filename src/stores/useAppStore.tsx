@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react'
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { supabase } from '@/lib/supabase/client'
+import { useAuth } from '@/hooks/use-auth'
 
 export type Status = 'Ativo' | 'Inativo'
 export type Sexo = 'M' | 'F'
@@ -134,275 +136,188 @@ export interface Publicacao {
   ranking: RankingSnapshotItem[]
 }
 
-const generateId = () => Math.random().toString(36).substring(2, 11)
-
-const initialLigas: Liga[] = [
-  {
-    id: '1',
-    nome: 'Liga Smash Categoria D',
-    categoria: 'D',
-    temporada: '2023',
-    total_rodadas: 12,
-    status: 'Ativo',
-    descricao: 'Liga amadora',
-    observacoes: '',
-  },
-]
-
-const initialAtletas: Atleta[] = Array.from({ length: 12 }).map((_, i) => ({
-  id: `a${i + 1}`,
-  nome_completo: `Atleta ${i + 1}`,
-  telefone: '(11) 99999-9999',
-  sexo: i % 2 === 0 ? 'M' : 'F',
-  categoria_principal: 'D',
-  status: 'Ativo',
-  observacoes: '',
-  avatar_url: `https://img.usecurling.com/ppl/thumbnail?gender=${i % 2 === 0 ? 'male' : 'female'}&seed=${i}`,
-}))
-
-const initialAtletaLigas: AtletaLiga[] = initialAtletas.map((a) => ({
-  id: generateId(),
-  atleta_id: a.id,
-  liga_id: '1',
-}))
-
-const initialSistemas: SistemaPontuacao[] = [
-  { id: 's1', nome: 'Sistema Geral Pro', tipo: 'Geral', ativo: true },
-  { id: 's2', nome: 'Sistema Vitórias', tipo: 'Vitorias', ativo: true },
-]
-
-const initialRegras: RegraPontuacao[] = [
-  { id: 'r1', sistema_id: 's1', chave: 'pos_1', valor_pontos: 180 },
-  { id: 'r1_2', sistema_id: 's1', chave: 'pos_2', valor_pontos: 170 },
-  { id: 'r1_3', sistema_id: 's1', chave: 'pos_3', valor_pontos: 160 },
-  { id: 'r1_4', sistema_id: 's1', chave: 'pos_4', valor_pontos: 150 },
-  { id: 'r1_5', sistema_id: 's1', chave: 'pos_5', valor_pontos: 140 },
-  { id: 'r1_6', sistema_id: 's1', chave: 'pos_6', valor_pontos: 130 },
-  { id: 'r1_7', sistema_id: 's1', chave: 'pos_7', valor_pontos: 120 },
-  { id: 'r1_8', sistema_id: 's1', chave: 'pos_8', valor_pontos: 110 },
-  { id: 'r1_9', sistema_id: 's1', chave: 'pos_9', valor_pontos: 100 },
-  { id: 'r1_10', sistema_id: 's1', chave: 'pos_10', valor_pontos: 90 },
-  { id: 'r1_11', sistema_id: 's1', chave: 'pos_11', valor_pontos: 80 },
-  { id: 'r1_12', sistema_id: 's1', chave: 'pos_12', valor_pontos: 70 },
-  { id: 'r1_13', sistema_id: 's1', chave: 'pos_13', valor_pontos: 60 },
-  { id: 'r1_14', sistema_id: 's1', chave: 'pos_14', valor_pontos: 50 },
-  { id: 'r1_15', sistema_id: 's1', chave: 'pos_15', valor_pontos: 40 },
-  { id: 'r1_16', sistema_id: 's1', chave: 'pos_16', valor_pontos: 30 },
-  { id: 'r1_17', sistema_id: 's1', chave: 'pos_17', valor_pontos: 20 },
-  { id: 'r1_18', sistema_id: 's1', chave: 'pos_18', valor_pontos: 10 },
-  { id: 'r1_19', sistema_id: 's1', chave: 'pos_19', valor_pontos: 5 },
-  { id: 'r1_20', sistema_id: 's1', chave: 'pos_20', valor_pontos: 0 },
-  { id: 'r2', sistema_id: 's1', chave: 'bonus_5x0', valor_pontos: 5 },
-  { id: 'r3', sistema_id: 's1', chave: 'podio_principal_1', valor_pontos: 50 },
-  { id: 'r4', sistema_id: 's1', chave: 'podio_principal_2', valor_pontos: 40 },
-  { id: 'r5', sistema_id: 's1', chave: 'podio_principal_3', valor_pontos: 30 },
-  { id: 'r6', sistema_id: 's1', chave: 'podio_consolacao_1', valor_pontos: 30 },
-  { id: 'r7', sistema_id: 's1', chave: 'podio_consolacao_2', valor_pontos: 20 },
-  { id: 'r8', sistema_id: 's1', chave: 'podio_consolacao_3', valor_pontos: 10 },
-  { id: 'r9', sistema_id: 's2', chave: 'vitoria_5x0', valor_pontos: 100 },
-  { id: 'r10', sistema_id: 's2', chave: 'vitoria_4x1', valor_pontos: 80 },
-  { id: 'r11', sistema_id: 's2', chave: 'vitoria_3x2', valor_pontos: 60 },
-  { id: 'r12', sistema_id: 's2', chave: 'derrota_2x3', valor_pontos: 40 },
-  { id: 'r13', sistema_id: 's2', chave: 'derrota_1x4', valor_pontos: 30 },
-  { id: 'r14', sistema_id: 's2', chave: 'derrota_0x5', valor_pontos: 20 },
-  { id: 'r15', sistema_id: 's2', chave: 'bonus_5x0', valor_pontos: 5 },
-  { id: 'r16', sistema_id: 's2', chave: 'podio_principal_1', valor_pontos: 50 },
-  { id: 'r17', sistema_id: 's2', chave: 'podio_principal_2', valor_pontos: 40 },
-  { id: 'r18', sistema_id: 's2', chave: 'podio_principal_3', valor_pontos: 30 },
-  { id: 'r19', sistema_id: 's2', chave: 'podio_consolacao_1', valor_pontos: 30 },
-  { id: 'r20', sistema_id: 's2', chave: 'podio_consolacao_2', valor_pontos: 20 },
-  { id: 'r21', sistema_id: 's2', chave: 'podio_consolacao_3', valor_pontos: 10 },
-]
-
-const initialRodadas: Rodada[] = [
-  {
-    id: 'r1',
-    liga_id: '1',
-    numero: 'R1',
-    data: '2023-10-15',
-    hora: '08:00',
-    local: 'Arena Beach',
-    sistema_id: 's1',
-    status: 'Round Finalized',
-    observacoes: '',
-  },
-]
-
-const initialGrupos: Grupo[] = [{ id: 'g1', rodada_id: 'r1', nome: 'Grupo A', finalizado: true }]
-
-const initialGrupoAtletas: GrupoAtleta[] = [
-  { id: 'ga1', grupo_id: 'g1', atleta_id: 'a1', status: 'Active' },
-  { id: 'ga2', grupo_id: 'g1', atleta_id: 'a2', status: 'Active' },
-  { id: 'ga3', grupo_id: 'g1', atleta_id: 'a3', status: 'Active' },
-  { id: 'ga4', grupo_id: 'g1', atleta_id: 'a4', status: 'Active' },
-]
-
-const initialPartidas: Partida[] = [
-  {
-    id: 'p1',
-    grupo_id: 'g1',
-    atleta1_id: 'a1',
-    atleta2_id: 'a2',
-    score1: 5,
-    atleta3_id: 'a3',
-    atleta4_id: 'a4',
-    score2: 0,
-  },
-]
-
-const initialPontuacoes: PontuacaoRodada[] = [
-  {
-    id: 'pt1',
-    rodada_id: 'r1',
-    atleta_id: 'a1',
-    pontos_grupo: 0,
-    pontos_vitorias: 10,
-    bonus_5x0: 5,
-    pontos_podio_principal: 50,
-    pontos_podio_consolacao: 0,
-    total: 65,
-  },
-  {
-    id: 'pt2',
-    rodada_id: 'r1',
-    atleta_id: 'a2',
-    pontos_grupo: 0,
-    pontos_vitorias: 10,
-    bonus_5x0: 5,
-    pontos_podio_principal: 30,
-    pontos_podio_consolacao: 0,
-    total: 45,
-  },
-  {
-    id: 'pt3',
-    rodada_id: 'r1',
-    atleta_id: 'a3',
-    pontos_grupo: 0,
-    pontos_vitorias: 0,
-    bonus_5x0: 0,
-    pontos_podio_principal: 20,
-    pontos_podio_consolacao: 0,
-    total: 20,
-  },
-]
-
-const initialPublicacoes: Publicacao[] = [
-  {
-    id: 'pub1',
-    data_publicacao: new Date().toISOString(),
-    liga_id: '1',
-    liga_nome: 'Liga Smash Categoria D',
-    temporada: '2023',
-    ranking: initialAtletas.slice(0, 10).map((a, i) => ({
-      posicao: i + 1,
-      atleta_id: a.id,
-      nome: a.nome_completo,
-      avatar: a.avatar_url,
-      categoria: a.categoria_principal,
-      total: 150 - i * 12,
-      podios: i < 3 ? 1 : 0,
-      bonus_5x0: i % 2 === 0 ? 1 : 0,
-      media: (15 - i * 1.2).toFixed(1),
-      rodadas: { R1: 150 - i * 12 },
-    })),
-  },
-]
-
 interface AppState {
   isAuthenticated: boolean
-  login: () => void
-  logout: () => void
+  login: () => Promise<void>
+  logout: () => Promise<void>
   ligas: Liga[]
-  addLiga: (l: Omit<Liga, 'id'>) => void
-  updateLiga: (id: string, l: Partial<Liga>) => void
+  addLiga: (l: Omit<Liga, 'id'>) => Promise<void>
+  updateLiga: (id: string, l: Partial<Liga>) => Promise<void>
   atletas: Atleta[]
-  addAtleta: (a: Omit<Atleta, 'id'>, l: string[]) => void
-  updateAtleta: (id: string, a: Partial<Atleta>, l?: string[]) => void
+  addAtleta: (a: Omit<Atleta, 'id'>, l: string[]) => Promise<void>
+  updateAtleta: (id: string, a: Partial<Atleta>, l?: string[]) => Promise<void>
   atletaLigas: AtletaLiga[]
   getAtletaLigas: (id: string) => Liga[]
   sistemas: SistemaPontuacao[]
   addSistema: (
     s: Omit<SistemaPontuacao, 'id'>,
     r: Omit<RegraPontuacao, 'id' | 'sistema_id'>[],
-  ) => void
-  updateSistema: (id: string, s: Partial<SistemaPontuacao>) => void
-  updateRegrasSistema: (sistema_id: string, r: Omit<RegraPontuacao, 'id' | 'sistema_id'>[]) => void
+  ) => Promise<void>
+  updateSistema: (id: string, s: Partial<SistemaPontuacao>) => Promise<void>
+  updateRegrasSistema: (
+    sistema_id: string,
+    r: Omit<RegraPontuacao, 'id' | 'sistema_id'>[],
+  ) => Promise<void>
   regras: RegraPontuacao[]
   rodadas: Rodada[]
-  addRodada: (r: Omit<Rodada, 'id'>) => void
-  updateRodada: (id: string, r: Partial<Rodada>) => void
-  deleteRodada: (id: string) => void
+  addRodada: (r: Omit<Rodada, 'id'>) => Promise<void>
+  updateRodada: (id: string, r: Partial<Rodada>) => Promise<void>
+  deleteRodada: (id: string) => Promise<void>
   grupos: Grupo[]
-  addGrupo: (g: Omit<Grupo, 'id'>) => void
-  updateGrupo: (id: string, g: Partial<Grupo>) => void
-  deleteGrupo: (id: string) => void
+  addGrupo: (g: Omit<Grupo, 'id'>) => Promise<void>
+  updateGrupo: (id: string, g: Partial<Grupo>) => Promise<void>
+  deleteGrupo: (id: string) => Promise<void>
   grupoAtletas: GrupoAtleta[]
-  addGrupoAtleta: (ga: Omit<GrupoAtleta, 'id'>) => void
-  updateGrupoAtleta: (id: string, ga: Partial<GrupoAtleta>) => void
-  deleteGrupoAtleta: (id: string) => void
+  addGrupoAtleta: (ga: Omit<GrupoAtleta, 'id'>) => Promise<void>
+  updateGrupoAtleta: (id: string, ga: Partial<GrupoAtleta>) => Promise<void>
+  deleteGrupoAtleta: (id: string) => Promise<void>
   partidas: Partida[]
-  addPartida: (p: Omit<Partida, 'id'>) => void
-  updatePartida: (id: string, p: Partial<Partida>) => void
-  deletePartida: (id: string) => void
+  addPartida: (p: Omit<Partida, 'id'>) => Promise<void>
+  updatePartida: (id: string, p: Partial<Partida>) => Promise<void>
+  deletePartida: (id: string) => Promise<void>
   podios: Podio[]
-  salvarPodiosRodada: (rodadaId: string, p: Podio[]) => void
+  salvarPodiosRodada: (rodadaId: string, p: Podio[]) => Promise<void>
   pontuacoes: PontuacaoRodada[]
-  finalizarRodada: (rodadaId: string) => void
+  finalizarRodada: (rodadaId: string) => Promise<void>
   publicacoes: Publicacao[]
   publicarRanking: (
     ligaId: string,
     ligaNome: string,
     temporada: string,
     ranking: RankingSnapshotItem[],
-  ) => void
-  deletePublicacao: (id: string) => void
+  ) => Promise<void>
+  deletePublicacao: (id: string) => Promise<void>
 }
 
 const AppContext = createContext<AppState | undefined>(undefined)
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [ligas, setLigas] = useState<Liga[]>(initialLigas)
-  const [atletas, setAtletas] = useState<Atleta[]>(initialAtletas)
-  const [atletaLigas, setAtletaLigas] = useState<AtletaLiga[]>(initialAtletaLigas)
-  const [sistemas, setSistemas] = useState<SistemaPontuacao[]>(initialSistemas)
-  const [regras, setRegras] = useState<RegraPontuacao[]>(initialRegras)
-  const [rodadas, setRodadas] = useState<Rodada[]>(initialRodadas)
-  const [grupos, setGrupos] = useState<Grupo[]>(initialGrupos)
-  const [grupoAtletas, setGrupoAtletas] = useState<GrupoAtleta[]>(initialGrupoAtletas)
-  const [partidas, setPartidas] = useState<Partida[]>(initialPartidas)
+  const { user } = useAuth()
+  const isAuthenticated = !!user
+
+  const [ligas, setLigas] = useState<Liga[]>([])
+  const [atletas, setAtletas] = useState<Atleta[]>([])
+  const [atletaLigas, setAtletaLigas] = useState<AtletaLiga[]>([])
+  const [sistemas, setSistemas] = useState<SistemaPontuacao[]>([])
+  const [regras, setRegras] = useState<RegraPontuacao[]>([])
+  const [rodadas, setRodadas] = useState<Rodada[]>([])
+  const [grupos, setGrupos] = useState<Grupo[]>([])
+  const [grupoAtletas, setGrupoAtletas] = useState<GrupoAtleta[]>([])
+  const [partidas, setPartidas] = useState<Partida[]>([])
   const [podios, setPodios] = useState<Podio[]>([])
-  const [pontuacoes, setPontuacoes] = useState<PontuacaoRodada[]>(initialPontuacoes)
-  const [publicacoes, setPublicacoes] = useState<Publicacao[]>(initialPublicacoes)
+  const [pontuacoes, setPontuacoes] = useState<PontuacaoRodada[]>([])
+  const [publicacoes, setPublicacoes] = useState<Publicacao[]>([])
 
-  const login = () => setIsAuthenticated(true)
-  const logout = () => setIsAuthenticated(false)
+  useEffect(() => {
+    const loadData = async () => {
+      const [
+        { data: ligasData },
+        { data: atletasData },
+        { data: atletaLigasData },
+        { data: sistemasData },
+        { data: regrasData },
+        { data: rodadasData },
+        { data: gruposData },
+        { data: grupoAtletasData },
+        { data: partidasData },
+        { data: podiosData },
+        { data: pontuacoesData },
+        { data: publicacoesData },
+      ] = await Promise.all([
+        supabase.from('ligas').select('*').order('created_at', { ascending: false }),
+        supabase.from('atletas').select('*').order('created_at', { ascending: false }),
+        supabase.from('atleta_ligas').select('*'),
+        supabase.from('sistemas_pontuacao').select('*'),
+        supabase.from('regras_pontuacao').select('*'),
+        supabase.from('rodadas').select('*'),
+        supabase.from('grupos').select('*'),
+        supabase.from('grupo_atletas').select('*'),
+        supabase.from('partidas').select('*'),
+        supabase.from('podios').select('*'),
+        supabase.from('pontuacoes_rodada').select('*'),
+        supabase.from('publicacoes').select('*').order('data_publicacao', { ascending: false }),
+      ])
 
-  const addLiga = (liga: Omit<Liga, 'id'>) =>
-    setLigas((prev) => [{ ...liga, id: generateId() }, ...prev])
-  const updateLiga = (id: string, liga: Partial<Liga>) =>
-    setLigas((prev) => prev.map((l) => (l.id === id ? { ...l, ...liga } : l)))
-
-  const addAtleta = (atleta: Omit<Atleta, 'id'>, ligas_ids: string[]) => {
-    const newAtleta = {
-      ...atleta,
-      id: generateId(),
-      avatar_url: `https://img.usecurling.com/ppl/thumbnail?gender=${atleta.sexo === 'M' ? 'male' : 'female'}&seed=${Math.random()}`,
+      if (ligasData) setLigas(ligasData as Liga[])
+      if (atletasData) setAtletas(atletasData as Atleta[])
+      if (atletaLigasData) setAtletaLigas(atletaLigasData as AtletaLiga[])
+      if (sistemasData) setSistemas(sistemasData as SistemaPontuacao[])
+      if (regrasData) setRegras(regrasData as RegraPontuacao[])
+      if (rodadasData) setRodadas(rodadasData as Rodada[])
+      if (gruposData) setGrupos(gruposData as Grupo[])
+      if (grupoAtletasData) setGrupoAtletas(grupoAtletasData as GrupoAtleta[])
+      if (partidasData) setPartidas(partidasData as Partida[])
+      if (podiosData) setPodios(podiosData as Podio[])
+      if (pontuacoesData) setPontuacoes(pontuacoesData as PontuacaoRodada[])
+      if (publicacoesData) setPublicacoes(publicacoesData as Publicacao[])
     }
-    setAtletas((prev) => [newAtleta, ...prev])
-    setAtletaLigas((prev) => [
-      ...ligas_ids.map((l) => ({ id: generateId(), atleta_id: newAtleta.id, liga_id: l })),
-      ...prev,
-    ])
+
+    loadData()
+  }, [user])
+
+  const login = async () => {
+    await supabase.auth.signInWithPassword({
+      email: 'ferricontabilidade@uol.com.br',
+      password: 'Skip@Password123',
+    })
   }
 
-  const updateAtleta = (id: string, atleta: Partial<Atleta>, ligas_ids?: string[]) => {
-    setAtletas((prev) => prev.map((a) => (a.id === id ? { ...a, ...atleta } : a)))
+  const logout = async () => {
+    await supabase.auth.signOut()
+  }
+
+  const addLiga = async (liga: Omit<Liga, 'id'>) => {
+    const { data } = await supabase.from('ligas').insert([liga]).select().single()
+    if (data) setLigas((prev) => [data as Liga, ...prev])
+  }
+
+  const updateLiga = async (id: string, liga: Partial<Liga>) => {
+    const { data } = await supabase.from('ligas').update(liga).eq('id', id).select().single()
+    if (data) setLigas((prev) => prev.map((l) => (l.id === id ? (data as Liga) : l)))
+  }
+
+  const addAtleta = async (atleta: Omit<Atleta, 'id'>, ligas_ids: string[]) => {
+    const avatar_url =
+      atleta.avatar_url ||
+      `https://img.usecurling.com/ppl/thumbnail?gender=${atleta.sexo === 'M' ? 'male' : 'female'}&seed=${Math.random()}`
+    const { data: newAtleta } = await supabase
+      .from('atletas')
+      .insert([{ ...atleta, avatar_url }])
+      .select()
+      .single()
+
+    if (newAtleta) {
+      setAtletas((prev) => [newAtleta as Atleta, ...prev])
+      if (ligas_ids.length > 0) {
+        const { data: novasLigas } = await supabase
+          .from('atleta_ligas')
+          .insert(ligas_ids.map((l) => ({ atleta_id: newAtleta.id, liga_id: l })))
+          .select()
+        if (novasLigas) setAtletaLigas((prev) => [...(novasLigas as AtletaLiga[]), ...prev])
+      }
+    }
+  }
+
+  const updateAtleta = async (id: string, atleta: Partial<Atleta>, ligas_ids?: string[]) => {
+    const { data } = await supabase.from('atletas').update(atleta).eq('id', id).select().single()
+    if (data) setAtletas((prev) => prev.map((a) => (a.id === id ? (data as Atleta) : a)))
+
     if (ligas_ids) {
-      setAtletaLigas((prev) => [
-        ...prev.filter((al) => al.atleta_id !== id),
-        ...ligas_ids.map((l) => ({ id: generateId(), atleta_id: id, liga_id: l })),
-      ])
+      await supabase.from('atleta_ligas').delete().eq('atleta_id', id)
+      if (ligas_ids.length > 0) {
+        const { data: novasLigas } = await supabase
+          .from('atleta_ligas')
+          .insert(ligas_ids.map((l) => ({ atleta_id: id, liga_id: l })))
+          .select()
+        if (novasLigas) {
+          setAtletaLigas((prev) => [
+            ...prev.filter((al) => al.atleta_id !== id),
+            ...(novasLigas as AtletaLiga[]),
+          ])
+        }
+      } else {
+        setAtletaLigas((prev) => prev.filter((al) => al.atleta_id !== id))
+      }
     }
   }
 
@@ -411,234 +326,310 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return ligas.filter((l) => ids.includes(l.id))
   }
 
-  const addSistema = (
+  const addSistema = async (
     sistema: Omit<SistemaPontuacao, 'id'>,
     novasRegras: Omit<RegraPontuacao, 'id' | 'sistema_id'>[],
   ) => {
-    const sisId = generateId()
-    setSistemas((prev) => [...prev, { ...sistema, id: sisId }])
-    setRegras((prev) => [
-      ...prev,
-      ...novasRegras.map((r) => ({ ...r, id: generateId(), sistema_id: sisId })),
-    ])
+    const { data: sData } = await supabase
+      .from('sistemas_pontuacao')
+      .insert([sistema])
+      .select()
+      .single()
+    if (sData) {
+      setSistemas((prev) => [...prev, sData as SistemaPontuacao])
+      const regrasToInsert = novasRegras.map((r) => ({ ...r, sistema_id: sData.id }))
+      if (regrasToInsert.length > 0) {
+        const { data: rData } = await supabase
+          .from('regras_pontuacao')
+          .insert(regrasToInsert)
+          .select()
+        if (rData) setRegras((prev) => [...prev, ...(rData as RegraPontuacao[])])
+      }
+    }
   }
 
-  const updateSistema = (id: string, sistema: Partial<SistemaPontuacao>) => {
-    setSistemas((prev) => prev.map((s) => (s.id === id ? { ...s, ...sistema } : s)))
+  const updateSistema = async (id: string, sistema: Partial<SistemaPontuacao>) => {
+    const { data } = await supabase
+      .from('sistemas_pontuacao')
+      .update(sistema)
+      .eq('id', id)
+      .select()
+      .single()
+    if (data) setSistemas((prev) => prev.map((s) => (s.id === id ? (data as SistemaPontuacao) : s)))
   }
 
-  const updateRegrasSistema = (
+  const updateRegrasSistema = async (
     sistema_id: string,
     novasRegras: Omit<RegraPontuacao, 'id' | 'sistema_id'>[],
   ) => {
-    setRegras((prev) => {
-      const filtered = prev.filter((r) => r.sistema_id !== sistema_id)
-      const mapped = novasRegras.map((r) => ({ ...r, id: generateId(), sistema_id }))
-      return [...filtered, ...mapped]
-    })
+    await supabase.from('regras_pontuacao').delete().eq('sistema_id', sistema_id)
+    const regrasToInsert = novasRegras.map((r) => ({ ...r, sistema_id }))
+    if (regrasToInsert.length > 0) {
+      const { data: rData } = await supabase
+        .from('regras_pontuacao')
+        .insert(regrasToInsert)
+        .select()
+      if (rData) {
+        setRegras((prev) => [
+          ...prev.filter((r) => r.sistema_id !== sistema_id),
+          ...(rData as RegraPontuacao[]),
+        ])
+      }
+    } else {
+      setRegras((prev) => prev.filter((r) => r.sistema_id !== sistema_id))
+    }
   }
 
-  const addRodada = (r: Omit<Rodada, 'id'>) =>
-    setRodadas((prev) => [{ ...r, id: generateId() }, ...prev])
-  const updateRodada = (id: string, r: Partial<Rodada>) =>
-    setRodadas((prev) => prev.map((item) => (item.id === id ? { ...item, ...r } : item)))
-  const deleteRodada = (id: string) => setRodadas((prev) => prev.filter((item) => item.id !== id))
+  const addRodada = async (r: Omit<Rodada, 'id'>) => {
+    const { data } = await supabase.from('rodadas').insert([r]).select().single()
+    if (data) setRodadas((prev) => [data as Rodada, ...prev])
+  }
+  const updateRodada = async (id: string, r: Partial<Rodada>) => {
+    const { data } = await supabase.from('rodadas').update(r).eq('id', id).select().single()
+    if (data) setRodadas((prev) => prev.map((item) => (item.id === id ? (data as Rodada) : item)))
+  }
+  const deleteRodada = async (id: string) => {
+    await supabase.from('rodadas').delete().eq('id', id)
+    setRodadas((prev) => prev.filter((item) => item.id !== id))
+  }
 
-  const addGrupo = (g: Omit<Grupo, 'id'>) =>
-    setGrupos((prev) => [...prev, { ...g, id: generateId() }])
-  const updateGrupo = (id: string, g: Partial<Grupo>) =>
-    setGrupos((prev) => prev.map((item) => (item.id === id ? { ...item, ...g } : item)))
-  const deleteGrupo = (id: string) => setGrupos((prev) => prev.filter((item) => item.id !== id))
+  const addGrupo = async (g: Omit<Grupo, 'id'>) => {
+    const { data } = await supabase.from('grupos').insert([g]).select().single()
+    if (data) setGrupos((prev) => [...prev, data as Grupo])
+  }
+  const updateGrupo = async (id: string, g: Partial<Grupo>) => {
+    const { data } = await supabase.from('grupos').update(g).eq('id', id).select().single()
+    if (data) setGrupos((prev) => prev.map((item) => (item.id === id ? (data as Grupo) : item)))
+  }
+  const deleteGrupo = async (id: string) => {
+    await supabase.from('grupos').delete().eq('id', id)
+    setGrupos((prev) => prev.filter((item) => item.id !== id))
+  }
 
-  const addGrupoAtleta = (ga: Omit<GrupoAtleta, 'id'>) =>
-    setGrupoAtletas((prev) => [...prev, { ...ga, id: generateId() }])
-  const updateGrupoAtleta = (id: string, ga: Partial<GrupoAtleta>) =>
-    setGrupoAtletas((prev) => prev.map((item) => (item.id === id ? { ...item, ...ga } : item)))
-  const deleteGrupoAtleta = (id: string) =>
+  const addGrupoAtleta = async (ga: Omit<GrupoAtleta, 'id'>) => {
+    const { data } = await supabase.from('grupo_atletas').insert([ga]).select().single()
+    if (data) setGrupoAtletas((prev) => [...prev, data as GrupoAtleta])
+  }
+  const updateGrupoAtleta = async (id: string, ga: Partial<GrupoAtleta>) => {
+    const { data } = await supabase.from('grupo_atletas').update(ga).eq('id', id).select().single()
+    if (data)
+      setGrupoAtletas((prev) => prev.map((item) => (item.id === id ? (data as GrupoAtleta) : item)))
+  }
+  const deleteGrupoAtleta = async (id: string) => {
+    await supabase.from('grupo_atletas').delete().eq('id', id)
     setGrupoAtletas((prev) => prev.filter((item) => item.id !== id))
-
-  const addPartida = (p: Omit<Partida, 'id'>) =>
-    setPartidas((prev) => [...prev, { ...p, id: generateId() }])
-  const updatePartida = (id: string, p: Partial<Partida>) =>
-    setPartidas((prev) => prev.map((item) => (item.id === id ? { ...item, ...p } : item)))
-  const deletePartida = (id: string) => setPartidas((prev) => prev.filter((item) => item.id !== id))
-
-  const salvarPodiosRodada = (rodadaId: string, novos: Podio[]) => {
-    setPodios((prev) => [...prev.filter((p) => p.rodada_id !== rodadaId), ...novos])
   }
 
-  const finalizarRodada = (rodadaId: string) => {
-    let currentRegras: RegraPontuacao[] = []
-    setRodadas((prev) =>
-      prev.map((r) => {
-        if (r.id === rodadaId) {
-          currentRegras = regras.filter((reg) => reg.sistema_id === r.sistema_id)
-          return { ...r, status: 'Round Finalized', snapshot_regras: currentRegras }
-        }
-        return r
-      }),
-    )
+  const addPartida = async (p: Omit<Partida, 'id'>) => {
+    const { data } = await supabase.from('partidas').insert([p]).select().single()
+    if (data) setPartidas((prev) => [...prev, data as Partida])
+  }
+  const updatePartida = async (id: string, p: Partial<Partida>) => {
+    const { data } = await supabase.from('partidas').update(p).eq('id', id).select().single()
+    if (data) setPartidas((prev) => prev.map((item) => (item.id === id ? (data as Partida) : item)))
+  }
+  const deletePartida = async (id: string) => {
+    await supabase.from('partidas').delete().eq('id', id)
+    setPartidas((prev) => prev.filter((item) => item.id !== id))
+  }
 
-    setTimeout(() => {
-      setPontuacoes((prev) => {
-        const filtered = prev.filter((p) => p.rodada_id !== rodadaId)
-        const rodada = rodadas.find((r) => r.id === rodadaId)
-        if (!rodada) return filtered
-        const sis = sistemas.find((s) => s.id === rodada.sistema_id)
-        const snapshot = currentRegras.length
-          ? currentRegras
-          : regras.filter((reg) => reg.sistema_id === rodada.sistema_id)
-        const getRule = (key: string) => snapshot.find((r) => r.chave === key)?.valor_pontos || 0
+  const salvarPodiosRodada = async (rodadaId: string, novos: Podio[]) => {
+    await supabase.from('podios').delete().eq('rodada_id', rodadaId)
+    if (novos.length > 0) {
+      const { data } = await supabase
+        .from('podios')
+        .insert(novos.map((p) => ({ ...p, rodada_id: rodadaId })))
+        .select()
+      if (data) {
+        setPodios((prev) => [...prev.filter((p) => p.rodada_id !== rodadaId), ...(data as Podio[])])
+      }
+    } else {
+      setPodios((prev) => prev.filter((p) => p.rodada_id !== rodadaId))
+    }
+  }
 
-        const newPts: PontuacaoRodada[] = []
-        const atletasMap = new Map<string, Partial<PontuacaoRodada>>()
-        const statsMap = new Map<string, { wins: number; saldo: number }>()
+  const finalizarRodada = async (rodadaId: string) => {
+    const rodada = rodadas.find((r) => r.id === rodadaId)
+    if (!rodada) return
+    const currentRegras = regras.filter((reg) => reg.sistema_id === rodada.sistema_id)
 
-        const initAtleta = (id: string) => {
-          if (!id) return null
-          if (!atletasMap.has(id)) {
-            atletasMap.set(id, {
-              rodada_id: rodadaId,
-              atleta_id: id,
-              pontos_grupo: 0,
-              pontos_vitorias: 0,
-              bonus_5x0: 0,
-              pontos_podio_principal: 0,
-              pontos_podio_consolacao: 0,
-              total: 0,
-            })
-          }
-          return atletasMap.get(id)!
-        }
-
-        const rGroups = grupos.filter((g) => g.rodada_id === rodadaId).map((g) => g.id)
-        const initStats = (id: string) => {
-          if (!id) return null
-          if (!statsMap.has(id)) statsMap.set(id, { wins: 0, saldo: 0 })
-          return statsMap.get(id)!
-        }
-
-        const rMatches = partidas.filter((p) => rGroups.includes(p.grupo_id))
-
-        rMatches.forEach((p) => {
-          ;[p.atleta1_id, p.atleta2_id, p.atleta3_id, p.atleta4_id].forEach((id) => initAtleta(id))
-
-          const p1 = initStats(p.atleta1_id)
-          const p2 = initStats(p.atleta2_id)
-          const p3 = initStats(p.atleta3_id)
-          const p4 = initStats(p.atleta4_id)
-
-          const v1 = p.score1 > p.score2
-          const v2 = p.score2 > p.score1
-          const is5x0_1 = p.score1 === 5 && p.score2 === 0
-          const is5x0_2 = p.score2 === 5 && p.score1 === 0
-
-          const updateStats = (
-            st: { wins: number; saldo: number } | null,
-            isWin: boolean,
-            ptsWon: number,
-            ptsLost: number,
-          ) => {
-            if (!st) return
-            if (isWin) st.wins += 1
-            st.saldo += ptsWon - ptsLost
-          }
-
-          updateStats(p1, v1, p.score1, p.score2)
-          updateStats(p2, v1, p.score1, p.score2)
-          updateStats(p3, v2, p.score2, p.score1)
-          updateStats(p4, v2, p.score2, p.score1)
-
-          const applyPts = (
-            aId: string | null,
-            isWin: boolean,
-            sW: number,
-            sL: number,
-            is5x0: boolean,
-          ) => {
-            const a = initAtleta(aId || '')
-            if (!a) return
-            if (sis?.tipo === 'Geral') {
-              if (isWin) a.pontos_vitorias! += getRule('vitoria')
-              if (is5x0) a.bonus_5x0! += getRule('bonus_5x0')
-            } else {
-              if (isWin) {
-                a.pontos_vitorias! += getRule(`vitoria_${sW}x${sL}`)
-                if (is5x0) a.bonus_5x0! += getRule('bonus_5x0')
-              } else {
-                a.pontos_vitorias! += getRule(`derrota_${sW}x${sL}`)
-              }
-            }
-          }
-
-          applyPts(p.atleta1_id, v1, p.score1, p.score2, is5x0_1)
-          applyPts(p.atleta2_id, v1, p.score1, p.score2, is5x0_1)
-          applyPts(p.atleta3_id, v2, p.score2, p.score1, is5x0_2)
-          applyPts(p.atleta4_id, v2, p.score2, p.score1, is5x0_2)
-        })
-
-        if (sis?.tipo === 'Geral') {
-          const rankedAthletes = Array.from(statsMap.entries())
-            .sort((a, b) => b[1].wins - a[1].wins || b[1].saldo - a[1].saldo)
-            .map((e) => e[0])
-
-          rankedAthletes.forEach((aId, idx) => {
-            const a = initAtleta(aId)
-            if (a) {
-              const pos = idx + 1
-              a.pontos_grupo = getRule(`pos_${pos}`) || 0
-            }
-          })
-        }
-
-        const rPodios = podios.filter((p) => p.rodada_id === rodadaId)
-        rPodios.forEach((p) => {
-          const ruleKey = `podio_${p.tipo.toLowerCase()}_${p.posicao}`
-          const pts = getRule(ruleKey)
-
-          const applyPodio = (aId: string | undefined) => {
-            const a = initAtleta(aId || '')
-            if (!a) return
-            if (p.tipo === 'Principal') a.pontos_podio_principal! += pts
-            else a.pontos_podio_consolacao! += pts
-          }
-          applyPodio(p.atleta1_id)
-          applyPodio(p.atleta2_id)
-        })
-
-        atletasMap.forEach((v) => {
-          v.total =
-            (v.pontos_grupo || 0) +
-            (v.pontos_vitorias || 0) +
-            (v.bonus_5x0 || 0) +
-            (v.pontos_podio_principal || 0) +
-            (v.pontos_podio_consolacao || 0)
-          newPts.push({ ...v, id: generateId() } as PontuacaoRodada)
-        })
-
-        return [...filtered, ...newPts]
+    const { data: updatedRodada } = await supabase
+      .from('rodadas')
+      .update({
+        status: 'Round Finalized',
+        snapshot_regras: currentRegras,
       })
-    }, 0)
+      .eq('id', rodadaId)
+      .select()
+      .single()
+
+    if (updatedRodada) {
+      setRodadas((prev) => prev.map((r) => (r.id === rodadaId ? (updatedRodada as Rodada) : r)))
+    }
+
+    await supabase.from('pontuacoes_rodada').delete().eq('rodada_id', rodadaId)
+
+    const sis = sistemas.find((s) => s.id === rodada.sistema_id)
+    const snapshot = currentRegras.length
+      ? currentRegras
+      : regras.filter((reg) => reg.sistema_id === rodada.sistema_id)
+    const getRule = (key: string) => snapshot.find((r) => r.chave === key)?.valor_pontos || 0
+
+    const newPts: Omit<PontuacaoRodada, 'id'>[] = []
+    const atletasMap = new Map<string, Omit<PontuacaoRodada, 'id'>>()
+    const statsMap = new Map<string, { wins: number; saldo: number }>()
+
+    const initAtleta = (id: string) => {
+      if (!id) return null
+      if (!atletasMap.has(id)) {
+        atletasMap.set(id, {
+          rodada_id: rodadaId,
+          atleta_id: id,
+          pontos_grupo: 0,
+          pontos_vitorias: 0,
+          bonus_5x0: 0,
+          pontos_podio_principal: 0,
+          pontos_podio_consolacao: 0,
+          total: 0,
+        })
+      }
+      return atletasMap.get(id)!
+    }
+
+    const rGroups = grupos.filter((g) => g.rodada_id === rodadaId).map((g) => g.id)
+    const initStats = (id: string) => {
+      if (!id) return null
+      if (!statsMap.has(id)) statsMap.set(id, { wins: 0, saldo: 0 })
+      return statsMap.get(id)!
+    }
+
+    const rMatches = partidas.filter((p) => rGroups.includes(p.grupo_id))
+
+    rMatches.forEach((p) => {
+      ;[p.atleta1_id, p.atleta2_id, p.atleta3_id, p.atleta4_id].forEach((id) => initAtleta(id))
+
+      const p1 = initStats(p.atleta1_id)
+      const p2 = initStats(p.atleta2_id)
+      const p3 = initStats(p.atleta3_id)
+      const p4 = initStats(p.atleta4_id)
+
+      const v1 = p.score1 > p.score2
+      const v2 = p.score2 > p.score1
+      const is5x0_1 = p.score1 === 5 && p.score2 === 0
+      const is5x0_2 = p.score2 === 5 && p.score1 === 0
+
+      const updateStats = (
+        st: { wins: number; saldo: number } | null,
+        isWin: boolean,
+        ptsWon: number,
+        ptsLost: number,
+      ) => {
+        if (!st) return
+        if (isWin) st.wins += 1
+        st.saldo += ptsWon - ptsLost
+      }
+
+      updateStats(p1, v1, p.score1, p.score2)
+      updateStats(p2, v1, p.score1, p.score2)
+      updateStats(p3, v2, p.score2, p.score1)
+      updateStats(p4, v2, p.score2, p.score1)
+
+      const applyPts = (
+        aId: string | null,
+        isWin: boolean,
+        sW: number,
+        sL: number,
+        is5x0: boolean,
+      ) => {
+        const a = initAtleta(aId || '')
+        if (!a) return
+        if (sis?.tipo === 'Geral') {
+          if (isWin) a.pontos_vitorias! += getRule('vitoria')
+          if (is5x0) a.bonus_5x0! += getRule('bonus_5x0')
+        } else {
+          if (isWin) {
+            a.pontos_vitorias! += getRule(`vitoria_${sW}x${sL}`)
+            if (is5x0) a.bonus_5x0! += getRule('bonus_5x0')
+          } else {
+            a.pontos_vitorias! += getRule(`derrota_${sW}x${sL}`)
+          }
+        }
+      }
+
+      applyPts(p.atleta1_id, v1, p.score1, p.score2, is5x0_1)
+      applyPts(p.atleta2_id, v1, p.score1, p.score2, is5x0_1)
+      applyPts(p.atleta3_id, v2, p.score2, p.score1, is5x0_2)
+      applyPts(p.atleta4_id, v2, p.score2, p.score1, is5x0_2)
+    })
+
+    if (sis?.tipo === 'Geral') {
+      const rankedAthletes = Array.from(statsMap.entries())
+        .sort((a, b) => b[1].wins - a[1].wins || b[1].saldo - a[1].saldo)
+        .map((e) => e[0])
+
+      rankedAthletes.forEach((aId, idx) => {
+        const a = initAtleta(aId)
+        if (a) {
+          const pos = idx + 1
+          a.pontos_grupo = getRule(`pos_${pos}`) || 0
+        }
+      })
+    }
+
+    const rPodios = podios.filter((p) => p.rodada_id === rodadaId)
+    rPodios.forEach((p) => {
+      const ruleKey = `podio_${p.tipo.toLowerCase()}_${p.posicao}`
+      const pts = getRule(ruleKey)
+
+      const applyPodio = (aId: string | undefined) => {
+        const a = initAtleta(aId || '')
+        if (!a) return
+        if (p.tipo === 'Principal') a.pontos_podio_principal! += pts
+        else a.pontos_podio_consolacao! += pts
+      }
+      applyPodio(p.atleta1_id)
+      applyPodio(p.atleta2_id)
+    })
+
+    atletasMap.forEach((v) => {
+      v.total =
+        (v.pontos_grupo || 0) +
+        (v.pontos_vitorias || 0) +
+        (v.bonus_5x0 || 0) +
+        (v.pontos_podio_principal || 0) +
+        (v.pontos_podio_consolacao || 0)
+      newPts.push(v)
+    })
+
+    if (newPts.length > 0) {
+      const { data: insertedPts } = await supabase.from('pontuacoes_rodada').insert(newPts).select()
+      if (insertedPts) {
+        setPontuacoes((prev) => {
+          const filtered = prev.filter((p) => p.rodada_id !== rodadaId)
+          return [...filtered, ...(insertedPts as PontuacaoRodada[])]
+        })
+      }
+    }
   }
 
-  const publicarRanking = (
+  const publicarRanking = async (
     ligaId: string,
     ligaNome: string,
     temporada: string,
     ranking: RankingSnapshotItem[],
   ) => {
-    const novaPub: Publicacao = {
-      id: generateId(),
-      data_publicacao: new Date().toISOString(),
+    const novaPub = {
       liga_id: ligaId,
       liga_nome: ligaNome,
       temporada,
       ranking,
     }
-    setPublicacoes((prev) => [novaPub, ...prev])
+    const { data } = await supabase.from('publicacoes').insert([novaPub]).select().single()
+    if (data) setPublicacoes((prev) => [data as Publicacao, ...prev])
   }
 
-  const deletePublicacao = (id: string) => {
+  const deletePublicacao = async (id: string) => {
+    await supabase.from('publicacoes').delete().eq('id', id)
     setPublicacoes((prev) => prev.filter((p) => p.id !== id))
   }
 
