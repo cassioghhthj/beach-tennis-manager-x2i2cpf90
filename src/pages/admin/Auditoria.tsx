@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import useAppStore from '@/stores/useAppStore'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import {
@@ -11,7 +11,17 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
-import { CheckCircle2, Trophy, Calculator, Mail } from 'lucide-react'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { CheckCircle2, Trophy, Calculator, Mail, Send, Smartphone, Loader2 } from 'lucide-react'
+import { getWhatsappConfig, sendWhatsappMessage, WhatsappConfig } from '@/services/whatsapp'
+import { useToast } from '@/hooks/use-toast'
 
 export default function Auditoria() {
   const { ligas, rodadas, atletas, pontuacoes, partidas, grupos, grupoAtletas } = useAppStore()
@@ -19,6 +29,15 @@ export default function Auditoria() {
   const [ligaId, setLigaId] = useState<string>('')
   const [rodadaId, setRodadaId] = useState<string>('')
   const [atletaId, setAtletaId] = useState<string>('')
+
+  const [config, setConfig] = useState<WhatsappConfig | null>(null)
+  const [sendingMap, setSendingMap] = useState<Record<string, boolean>>({})
+  const [sendingAll, setSendingAll] = useState(false)
+  const { toast } = useToast()
+
+  useEffect(() => {
+    getWhatsappConfig().then(setConfig)
+  }, [])
 
   const rodadasLiga = useMemo(() => rodadas.filter((r) => r.liga_id === ligaId), [rodadas, ligaId])
   const pontuacoesRodada = useMemo(
@@ -54,6 +73,89 @@ export default function Auditoria() {
     )
   }, [rodadaId, atletaId, grupos, grupoAtletas])
 
+  const atletasComPontuacao = useMemo(() => {
+    return atletasDaRodada
+      .map((a) => {
+        const pt = pontuacoesRodada.find((p) => p.atleta_id === a.id)
+        return { ...a, pontuacao: pt }
+      })
+      .sort((a, b) => (b.pontuacao?.total || 0) - (a.pontuacao?.total || 0))
+  }, [atletasDaRodada, pontuacoesRodada])
+
+  const handleSendIndividual = async (targetAtletaId: string) => {
+    if (!config?.api_url) {
+      toast({ title: 'Configure o WhatsApp primeiro!', variant: 'destructive' })
+      return
+    }
+
+    const targetAtleta = atletasComPontuacao.find((a) => a.id === targetAtletaId)
+    if (!targetAtleta || !targetAtleta.telefone) {
+      toast({ title: 'Atleta sem telefone cadastrado', variant: 'destructive' })
+      return
+    }
+
+    setSendingMap((prev) => ({ ...prev, [targetAtletaId]: true }))
+    try {
+      const liga = ligas.find((l) => l.id === ligaId)
+      const rodada = rodadas.find((r) => r.id === rodadaId)
+      let msg = config.mensagem_template || ''
+      msg = msg.replace(/\{nome_atleta\}/g, targetAtleta.nome_completo)
+      msg = msg.replace(/\{pontuacao\}/g, (targetAtleta.pontuacao?.total || 0).toString())
+      msg = msg.replace(/\{rodada\}/g, rodada?.numero || '')
+      msg = msg.replace(/\{liga\}/g, liga?.nome || '')
+
+      await sendWhatsappMessage(targetAtleta.telefone, msg)
+      toast({ title: 'Mensagem enviada!', description: `Para ${targetAtleta.nome_completo}` })
+    } catch (error: any) {
+      toast({ title: 'Erro ao enviar', description: error.message, variant: 'destructive' })
+    } finally {
+      setSendingMap((prev) => ({ ...prev, [targetAtletaId]: false }))
+    }
+  }
+
+  const handleSendAll = async () => {
+    if (!config?.api_url) {
+      toast({ title: 'Configure o WhatsApp primeiro!', variant: 'destructive' })
+      return
+    }
+
+    const validAtletas = atletasComPontuacao.filter((a) => a.telefone && a.pontuacao)
+    if (validAtletas.length === 0) {
+      toast({ title: 'Nenhum atleta válido com telefone', variant: 'destructive' })
+      return
+    }
+
+    setSendingAll(true)
+    let successCount = 0
+    let errorCount = 0
+
+    for (const a of validAtletas) {
+      setSendingMap((prev) => ({ ...prev, [a.id]: true }))
+      try {
+        const liga = ligas.find((l) => l.id === ligaId)
+        const rodada = rodadas.find((r) => r.id === rodadaId)
+        let msg = config.mensagem_template || ''
+        msg = msg.replace(/\{nome_atleta\}/g, a.nome_completo)
+        msg = msg.replace(/\{pontuacao\}/g, (a.pontuacao?.total || 0).toString())
+        msg = msg.replace(/\{rodada\}/g, rodada?.numero || '')
+        msg = msg.replace(/\{liga\}/g, liga?.nome || '')
+
+        await sendWhatsappMessage(a.telefone, msg)
+        successCount++
+      } catch (error) {
+        errorCount++
+      } finally {
+        setSendingMap((prev) => ({ ...prev, [a.id]: false }))
+      }
+    }
+
+    setSendingAll(false)
+    toast({
+      title: 'Disparo concluído',
+      description: `${successCount} enviados com sucesso, ${errorCount} erros.`,
+    })
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -63,8 +165,16 @@ export default function Auditoria() {
             Inspecione o cálculo de pontos de cada atleta por rodada.
           </p>
         </div>
-        <Button disabled>
-          <Mail className="mr-2 h-4 w-4" /> Enviar desempenho ao atleta
+        <Button
+          onClick={handleSendAll}
+          disabled={sendingAll || !rodadaId || atletasComPontuacao.length === 0}
+        >
+          {sendingAll ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Send className="mr-2 h-4 w-4" />
+          )}
+          Enviar para todos da rodada
         </Button>
       </div>
 
@@ -119,9 +229,10 @@ export default function Auditoria() {
               <Label>Atleta</Label>
               <Select value={atletaId} onValueChange={setAtletaId} disabled={!rodadaId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione o Atleta" />
+                  <SelectValue placeholder="Opcional: Filtrar Atleta" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="none">Todos os atletas</SelectItem>
                   {atletasDaRodada.map((a) => (
                     <SelectItem key={a.id} value={a.id}>
                       {a.nome_completo}
@@ -134,7 +245,73 @@ export default function Auditoria() {
         </CardContent>
       </Card>
 
-      {pontuacao && atleta && (
+      {rodadaId && (!atletaId || atletaId === 'none') && (
+        <Card className="mt-6 animate-fade-in-up">
+          <CardHeader>
+            <CardTitle>Atletas da Rodada</CardTitle>
+            <CardDescription>
+              Lista completa de participantes para disparo de mensagens ou auditoria detalhada.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Atleta</TableHead>
+                  <TableHead>Telefone</TableHead>
+                  <TableHead>Pontos</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {atletasComPontuacao.map((a) => (
+                  <TableRow key={a.id}>
+                    <TableCell
+                      className="font-medium cursor-pointer text-primary hover:underline"
+                      onClick={() => setAtletaId(a.id)}
+                    >
+                      {a.nome_completo}
+                    </TableCell>
+                    <TableCell>
+                      {a.telefone || (
+                        <span className="text-muted-foreground text-xs">Sem número</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{a.pontuacao?.total || 0} pts</Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleSendIndividual(a.id)}
+                        disabled={sendingMap[a.id] || !a.telefone}
+                        className="gap-2"
+                      >
+                        {sendingMap[a.id] ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Smartphone className="h-4 w-4" />
+                        )}
+                        WhatsApp
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {atletasComPontuacao.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center p-8 text-muted-foreground">
+                      Nenhum atleta nesta rodada.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
+      {pontuacao && atleta && atletaId !== 'none' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in-up">
           <Card className="lg:col-span-2">
             <CardHeader>

@@ -17,6 +17,7 @@ import RodadaDetalhes from './pages/admin/RodadaDetalhes'
 import Auditoria from './pages/admin/Auditoria'
 import Ranking from './pages/admin/Ranking'
 import HistoricoPublicacoes from './pages/admin/HistoricoPublicacoes'
+import ConfiguracoesWhatsapp from './pages/admin/ConfiguracoesWhatsapp'
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth()
@@ -52,6 +53,7 @@ const AppRoutes = () => (
           <Route path="auditoria" element={<Auditoria />} />
           <Route path="ranking" element={<Ranking />} />
           <Route path="publicacoes" element={<HistoricoPublicacoes />} />
+          <Route path="whatsapp" element={<ConfiguracoesWhatsapp />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>

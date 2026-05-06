@@ -11,6 +11,7 @@ import {
   LogOut,
   Search,
   History,
+  MessageSquareShare,
 } from 'lucide-react'
 import {
   SidebarProvider,
@@ -52,6 +53,7 @@ export default function AdminLayout() {
     { name: 'Auditoria de Pontuação', to: '/admin/auditoria', icon: ShieldCheck },
     { name: 'Ranking Interno', to: '/admin/ranking', icon: Medal },
     { name: 'Histórico de Publicações', to: '/admin/publicacoes', icon: History },
+    { name: 'Config. WhatsApp', to: '/admin/whatsapp', icon: MessageSquareShare },
   ]
 
   return (
