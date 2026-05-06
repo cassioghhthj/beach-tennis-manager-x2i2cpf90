@@ -94,8 +94,8 @@ export default function Atletas() {
               <TableRow key={atleta.id} className="transition-colors hover:bg-muted/30">
                 <TableCell>
                   <Avatar className="h-10 w-10 border shadow-sm">
-                    <AvatarImage src={atleta.avatar_url} />
-                    <AvatarFallback className="bg-primary/10 text-primary">
+                    <AvatarImage src={atleta.avatar_url} className="object-cover" />
+                    <AvatarFallback className="bg-primary/10 text-primary font-bold">
                       {atleta.nome_completo.substring(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>

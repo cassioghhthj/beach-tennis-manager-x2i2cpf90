@@ -2,8 +2,27 @@ import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Medal, Calendar, Users, Trophy } from 'lucide-react'
+import useAppStore from '@/stores/useAppStore'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 
 export default function Index() {
+  const { publicacoes } = useAppStore()
+
+  const latestPubs = publicacoes
+    ? [...publicacoes].sort(
+        (a, b) => new Date(b.data_publicacao).getTime() - new Date(a.data_publicacao).getTime(),
+      )
+    : []
+  const latestPub = latestPubs.length > 0 ? latestPubs[0] : null
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <header className="border-b bg-card shadow-sm sticky top-0 z-10">
@@ -102,16 +121,117 @@ export default function Index() {
           </div>
         </section>
 
-        <section className="py-12 bg-muted/30">
-          <div className="container mx-auto px-4 text-center">
-            <Trophy className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-muted-foreground mb-2">
-              Tabela de Classificação
-            </h2>
-            <p className="text-muted-foreground max-w-md mx-auto mb-6">
-              Os dados de classificação estarão disponíveis assim que as primeiras rodadas forem
-              computadas.
-            </p>
+        <section className="py-16 bg-muted/30">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-10">
+              <Trophy className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
+              <h2 className="text-3xl font-bold text-foreground mb-2">Classificação Oficial</h2>
+            </div>
+
+            {latestPub ? (
+              <div className="max-w-5xl mx-auto">
+                <div className="mb-6 text-center">
+                  <Badge
+                    variant="outline"
+                    className="text-lg py-1.5 px-6 border-primary/50 text-primary shadow-sm bg-background"
+                  >
+                    {latestPub.liga_nome} - {latestPub.temporada}
+                  </Badge>
+                  <p className="text-sm text-muted-foreground mt-3 font-medium">
+                    Atualizado em{' '}
+                    {new Date(latestPub.data_publicacao).toLocaleDateString('pt-BR', {
+                      day: '2-digit',
+                      month: 'long',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </p>
+                </div>
+                <Card className="overflow-hidden border-border/50 shadow-md">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader className="bg-muted/50">
+                        <TableRow>
+                          <TableHead className="w-20 text-center font-bold">Pos</TableHead>
+                          <TableHead className="font-bold">Atleta</TableHead>
+                          <TableHead className="text-center font-bold">Categoria</TableHead>
+                          <TableHead className="text-center font-bold">Pódios</TableHead>
+                          <TableHead className="text-center font-bold text-primary">
+                            Pontos
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {(latestPub.ranking as any[]).map((r: any, idx: number) => (
+                          <TableRow
+                            key={r.atleta_id}
+                            className="transition-colors hover:bg-muted/30"
+                          >
+                            <TableCell className="text-center font-medium">
+                              {idx === 0 ? (
+                                <Badge className="bg-yellow-500 hover:bg-yellow-600 px-2 py-0.5 text-sm shadow-sm">
+                                  1º
+                                </Badge>
+                              ) : idx === 1 ? (
+                                <Badge className="bg-slate-300 text-slate-800 hover:bg-slate-400 px-2 py-0.5 text-sm shadow-sm">
+                                  2º
+                                </Badge>
+                              ) : idx === 2 ? (
+                                <Badge className="bg-amber-600 hover:bg-amber-700 px-2 py-0.5 text-sm shadow-sm">
+                                  3º
+                                </Badge>
+                              ) : (
+                                <span className="text-muted-foreground font-semibold">
+                                  {r.posicao}º
+                                </span>
+                              )}
+                            </TableCell>
+                            <TableCell className="font-medium flex items-center gap-4">
+                              <Avatar className="h-12 w-12 border shadow-sm ring-2 ring-background">
+                                <AvatarImage src={r.avatar} className="object-cover" />
+                                <AvatarFallback className="bg-primary/10 text-primary font-bold">
+                                  {r.nome.substring(0, 2).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="truncate text-base font-bold">{r.nome}</span>
+                            </TableCell>
+                            <TableCell className="text-center text-muted-foreground font-medium">
+                              {r.categoria}
+                            </TableCell>
+                            <TableCell className="text-center font-medium">
+                              {r.podios > 0 ? (
+                                <Badge
+                                  variant="secondary"
+                                  className="bg-primary/5 text-primary border-primary/20"
+                                >
+                                  {r.podios} 🏆
+                                </Badge>
+                              ) : (
+                                '-'
+                              )}
+                            </TableCell>
+                            <TableCell className="text-center font-black text-primary text-xl">
+                              {r.total}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </Card>
+              </div>
+            ) : (
+              <div className="text-center p-10 bg-card rounded-xl border border-dashed shadow-sm max-w-2xl mx-auto">
+                <p className="text-muted-foreground text-lg mb-2">
+                  Os dados de classificação estarão disponíveis assim que as primeiras rodadas forem
+                  publicadas.
+                </p>
+                <p className="text-sm text-muted-foreground/60">
+                  Aguarde os administradores lançarem os resultados.
+                </p>
+              </div>
+            )}
           </div>
         </section>
       </main>

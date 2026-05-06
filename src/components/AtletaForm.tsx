@@ -1,8 +1,13 @@
+import { useState, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Camera, Loader2 } from 'lucide-react'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { toast } from 'sonner'
+import { supabase } from '@/lib/supabase/client'
 import {
   Select,
   SelectContent,
@@ -28,6 +33,7 @@ const formSchema = z.object({
   status: z.enum(['Ativo', 'Inativo']),
   observacoes: z.string().optional().default(''),
   ligas_ids: z.array(z.string()).default([]),
+  avatar_url: z.string().optional().nullable(),
 })
 
 interface AtletaFormProps {
@@ -38,6 +44,9 @@ interface AtletaFormProps {
 }
 
 export function AtletaForm({ initialData, onSubmit, onCancel, ligas }: AtletaFormProps) {
+  const [isUploading, setIsUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: initialData || {
@@ -48,12 +57,92 @@ export function AtletaForm({ initialData, onSubmit, onCancel, ligas }: AtletaFor
       status: 'Ativo',
       observacoes: '',
       ligas_ids: [],
+      avatar_url: null,
     },
   })
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!file.type.includes('image/')) {
+      toast.error('Por favor, selecione uma imagem.')
+      return
+    }
+
+    setIsUploading(true)
+    try {
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`
+      const filePath = `${fileName}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, { upsert: true })
+
+      if (uploadError) {
+        throw uploadError
+      }
+
+      const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(filePath)
+
+      form.setValue('avatar_url', publicUrlData.publicUrl)
+      toast.success('Foto carregada com sucesso!')
+    } catch (error) {
+      console.error(error)
+      toast.error('Erro ao fazer upload da imagem.')
+    } finally {
+      setIsUploading(false)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <div className="flex items-center gap-4 pb-4">
+          <Avatar className="h-20 w-20 border shadow-sm">
+            <AvatarImage src={form.watch('avatar_url') || ''} className="object-cover" />
+            <AvatarFallback className="bg-primary/10 text-primary">
+              {form.watch('nome_completo')?.substring(0, 2)?.toUpperCase() || (
+                <Camera className="h-6 w-6" />
+              )}
+            </AvatarFallback>
+          </Avatar>
+          <div className="space-y-1">
+            <FormLabel>Foto do Atleta</FormLabel>
+            <div className="flex items-center gap-2">
+              <Input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+              >
+                {isUploading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Fazendo upload...
+                  </>
+                ) : (
+                  <>
+                    <Camera className="mr-2 h-4 w-4" /> Alterar foto
+                  </>
+                )}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">Recomendado: Imagem quadrada, máx 2MB.</p>
+          </div>
+        </div>
+
         <FormField
           control={form.control}
           name="nome_completo"

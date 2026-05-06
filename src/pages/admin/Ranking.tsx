@@ -191,7 +191,7 @@ export default function Ranking() {
                     </TableCell>
                     <TableCell className="font-medium flex items-center gap-2">
                       <Avatar className="h-6 w-6">
-                        <AvatarImage src={row.avatar} />
+                        <AvatarImage src={row.avatar} className="object-cover" />
                         <AvatarFallback>{row.nome.substring(0, 2)}</AvatarFallback>
                       </Avatar>
                       <span className="truncate">{row.nome}</span>
@@ -239,9 +239,11 @@ export default function Ranking() {
           {selectedData && (
             <div className="py-6 space-y-6">
               <div className="flex items-center gap-4">
-                <Avatar className="h-16 w-16">
-                  <AvatarImage src={selectedData.avatar} />
-                  <AvatarFallback>{selectedData.nome.substring(0, 2)}</AvatarFallback>
+                <Avatar className="h-16 w-16 border shadow-sm">
+                  <AvatarImage src={selectedData.avatar} className="object-cover" />
+                  <AvatarFallback className="text-xl font-bold bg-primary/10 text-primary">
+                    {selectedData.nome.substring(0, 2)}
+                  </AvatarFallback>
                 </Avatar>
                 <div>
                   <h3 className="text-xl font-bold">{selectedData.nome}</h3>
