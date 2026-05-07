@@ -81,6 +81,39 @@ export type Database = {
         }
         Relationships: []
       }
+      configuracoes_whatsapp: {
+        Row: {
+          api_token: string
+          api_url: string
+          created_at: string
+          id: string
+          mensagem_template: string
+          session_name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          api_token?: string
+          api_url?: string
+          created_at?: string
+          id?: string
+          mensagem_template?: string
+          session_name?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          api_token?: string
+          api_url?: string
+          created_at?: string
+          id?: string
+          mensagem_template?: string
+          session_name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       grupo_atletas: {
         Row: {
           atleta_id: string | null
@@ -674,6 +707,15 @@ export const Constants = {
 //   observacoes: text (nullable)
 //   avatar_url: text (nullable)
 //   created_at: timestamp with time zone (not null, default: now())
+// Table: configuracoes_whatsapp
+//   id: uuid (not null, default: gen_random_uuid())
+//   user_id: uuid (not null)
+//   api_url: text (not null, default: ''::text)
+//   api_token: text (not null, default: ''::text)
+//   session_name: text (not null, default: 'default'::text)
+//   mensagem_template: text (not null, default: 'Olá {nome_atleta}, seu resultado da rodada saiu! Você conquistou {pontuacao} pontos.'::text)
+//   created_at: timestamp with time zone (not null, default: now())
+//   updated_at: timestamp with time zone (not null, default: now())
 // Table: grupo_atletas
 //   id: uuid (not null, default: gen_random_uuid())
 //   grupo_id: uuid (nullable)
@@ -763,6 +805,10 @@ export const Constants = {
 // Table: atletas
 //   PRIMARY KEY atletas_pkey: PRIMARY KEY (id)
 //   FOREIGN KEY atletas_user_id_fkey: FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
+// Table: configuracoes_whatsapp
+//   PRIMARY KEY configuracoes_whatsapp_pkey: PRIMARY KEY (id)
+//   FOREIGN KEY configuracoes_whatsapp_user_id_fkey: FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
+//   UNIQUE configuracoes_whatsapp_user_id_key: UNIQUE (user_id)
 // Table: grupo_atletas
 //   FOREIGN KEY grupo_atletas_atleta_id_fkey: FOREIGN KEY (atleta_id) REFERENCES atletas(id) ON DELETE CASCADE
 //   FOREIGN KEY grupo_atletas_grupo_id_fkey: FOREIGN KEY (grupo_id) REFERENCES grupos(id) ON DELETE CASCADE
@@ -818,6 +864,10 @@ export const Constants = {
 //   Policy "allow_auth_all" (ALL, PERMISSIVE) roles={authenticated}
 //     USING: true
 //     WITH CHECK: true
+// Table: configuracoes_whatsapp
+//   Policy "allow_auth_all" (ALL, PERMISSIVE) roles={authenticated}
+//     USING: (user_id = auth.uid())
+//     WITH CHECK: (user_id = auth.uid())
 // Table: grupo_atletas
 //   Policy "allow_anon_read" (SELECT, PERMISSIVE) roles={anon}
 //     USING: true
@@ -882,3 +932,5 @@ export const Constants = {
 // --- INDEXES ---
 // Table: atleta_ligas
 //   CREATE UNIQUE INDEX atleta_ligas_atleta_id_liga_id_key ON public.atleta_ligas USING btree (atleta_id, liga_id)
+// Table: configuracoes_whatsapp
+//   CREATE UNIQUE INDEX configuracoes_whatsapp_user_id_key ON public.configuracoes_whatsapp USING btree (user_id)

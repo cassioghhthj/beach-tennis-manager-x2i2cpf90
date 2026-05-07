@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { UserPlus, RefreshCcw } from 'lucide-react'
+import { UserPlus, RefreshCcw, Trash2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -23,7 +23,15 @@ export default function GrupoAtletasList({
   rodada: Rodada
   isFinalizado: boolean
 }) {
-  const { atletas, atletaLigas, grupoAtletas, addGrupoAtleta, updateGrupoAtleta } = useAppStore()
+  const {
+    partidas,
+    atletas,
+    atletaLigas,
+    grupoAtletas,
+    addGrupoAtleta,
+    deleteGrupoAtleta,
+    substituirAtletaNoGrupo,
+  } = useAppStore()
 
   const [selectedAtleta, setSelectedAtleta] = useState('')
   const [subDialogOpen, setSubDialogOpen] = useState(false)
@@ -50,6 +58,11 @@ export default function GrupoAtletasList({
       })
   }, [grupoAtletas, grupo.id, atletas])
 
+  const hasMatches = useMemo(
+    () => partidas.some((p) => p.grupo_id === grupo.id),
+    [partidas, grupo.id],
+  )
+
   const handleAdd = () => {
     if (!selectedAtleta) return
     addGrupoAtleta({ grupo_id: grupo.id, atleta_id: selectedAtleta, status: 'Active' })
@@ -61,14 +74,9 @@ export default function GrupoAtletasList({
     setSubDialogOpen(true)
   }
 
-  const handleSubstituir = () => {
+  const handleSubstituir = async () => {
     if (!substitutoId || !motivo) return
-    updateGrupoAtleta(subGaId, {
-      status: 'Substituted',
-      substituido_por_id: substitutoId,
-      motivo_substituicao: motivo,
-    })
-    addGrupoAtleta({ grupo_id: grupo.id, atleta_id: substitutoId, status: 'Active' })
+    await substituirAtletaNoGrupo(subGaId, substitutoId, motivo)
     setSubDialogOpen(false)
     setSubstitutoId('')
     setMotivo('')
@@ -116,14 +124,29 @@ export default function GrupoAtletasList({
               )}
             </div>
             {!isFinalizado && ga.status === 'Active' && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 text-muted-foreground"
-                onClick={() => openSubDialog(ga.id)}
-              >
-                <RefreshCcw className="h-3 w-3" />
-              </Button>
+              <div className="flex gap-1">
+                {hasMatches ? (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-muted-foreground hover:bg-muted"
+                    title="Substituir Atleta (Partidas já registradas)"
+                    onClick={() => openSubDialog(ga.id)}
+                  >
+                    <RefreshCcw className="h-3 w-3" />
+                  </Button>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    title="Remover Atleta"
+                    onClick={() => deleteGrupoAtleta(ga.id)}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
             )}
           </div>
         ))}

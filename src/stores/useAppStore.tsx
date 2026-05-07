@@ -172,6 +172,7 @@ interface AppState {
   updateGrupoAtleta: (id: string, ga: Partial<GrupoAtleta>) => Promise<void>
   deleteGrupoAtleta: (id: string) => Promise<void>
   partidas: Partida[]
+  substituirAtletaNoGrupo: (gaId: string, subId: string, motivo: string) => Promise<void>
   addPartida: (p: Omit<Partida, 'id'>) => Promise<void>
   updatePartida: (id: string, p: Partial<Partida>) => Promise<void>
   deletePartida: (id: string) => Promise<void>
@@ -420,6 +421,81 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setGrupoAtletas((prev) => prev.filter((item) => item.id !== id))
   }
 
+  const substituirAtletaNoGrupo = async (gaId: string, subId: string, motivo: string) => {
+    const ga = grupoAtletas.find((g) => g.id === gaId)
+    if (!ga) return
+
+    const { data: updatedGa } = await supabase
+      .from('grupo_atletas')
+      .update({
+        status: 'Substituted',
+        substituido_por_id: subId,
+        motivo_substituicao: motivo,
+      })
+      .eq('id', gaId)
+      .select()
+      .single()
+
+    if (updatedGa) {
+      setGrupoAtletas((prev) =>
+        prev.map((item) => (item.id === gaId ? (updatedGa as GrupoAtleta) : item)),
+      )
+    }
+
+    const { data: newGa } = await supabase
+      .from('grupo_atletas')
+      .insert([
+        {
+          grupo_id: ga.grupo_id,
+          atleta_id: subId,
+          status: 'Active',
+        },
+      ])
+      .select()
+      .single()
+
+    if (newGa) {
+      setGrupoAtletas((prev) => [...prev, newGa as GrupoAtleta])
+    }
+
+    const partidasGrupo = partidas.filter((p) => p.grupo_id === ga.grupo_id)
+    for (const p of partidasGrupo) {
+      let needsUpdate = false
+      const updateData: Partial<Partida> = {}
+
+      if (p.atleta1_id === ga.atleta_id) {
+        updateData.atleta1_id = subId
+        needsUpdate = true
+      }
+      if (p.atleta2_id === ga.atleta_id) {
+        updateData.atleta2_id = subId
+        needsUpdate = true
+      }
+      if (p.atleta3_id === ga.atleta_id) {
+        updateData.atleta3_id = subId
+        needsUpdate = true
+      }
+      if (p.atleta4_id === ga.atleta_id) {
+        updateData.atleta4_id = subId
+        needsUpdate = true
+      }
+
+      if (needsUpdate) {
+        const { data: updatedP } = await supabase
+          .from('partidas')
+          .update(updateData)
+          .eq('id', p.id)
+          .select()
+          .single()
+        if (updatedP) {
+          setPartidas((prev) =>
+            prev.map((item) => (item.id === p.id ? (updatedP as Partida) : item)),
+          )
+        }
+      }
+    }
+  }
+
   const addPartida = async (p: Omit<Partida, 'id'>) => {
     const { data } = await supabase.from('partidas').insert([p]).select().single()
     if (data) setPartidas((prev) => [...prev, data as Partida])
@@ -664,6 +740,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         addGrupoAtleta,
         updateGrupoAtleta,
         deleteGrupoAtleta,
+        substituirAtletaNoGrupo,
         partidas,
         addPartida,
         updatePartida,

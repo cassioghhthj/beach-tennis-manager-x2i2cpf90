@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Trash2 } from 'lucide-react'
+import { Trash2, Save } from 'lucide-react'
 
 export default function GrupoPartidasList({
   grupo,
@@ -64,13 +64,16 @@ export default function GrupoPartidasList({
     setS2('')
   }
 
-  const getAtletaName = (id: string) =>
-    atletas.find((a) => a.id === id)?.nome_completo.split(' ')[0] || 'Unknown'
+  const getAtletaName = (id: string) => {
+    const nome = atletas.find((a) => a.id === id)?.nome_completo
+    if (!nome) return 'Unknown'
+    return nome
+  }
 
-  const AtletaSelect = ({ value, onChange }: any) => (
+  const AtletaSelect = ({ value, onChange, placeholder }: any) => (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="w-[100px] h-8 text-xs px-2">
-        <SelectValue placeholder="Atleta" />
+      <SelectTrigger className="w-full h-9 text-sm bg-background">
+        <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
         {grupoAtletasList.map((a) => (
@@ -86,64 +89,88 @@ export default function GrupoPartidasList({
     <div className="space-y-4">
       <h3 className="font-semibold text-sm">Partidas</h3>
       {!isFinalizado && (
-        <div className="bg-muted/50 p-2 rounded-md space-y-2 border">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex flex-col gap-1">
-              <AtletaSelect value={a1} onChange={setA1} />
-              <AtletaSelect value={a2} onChange={setA2} />
+        <div className="bg-muted/30 p-3 rounded-lg border space-y-3">
+          <div className="flex flex-col md:flex-row items-center gap-3">
+            <div className="flex-1 flex flex-col gap-2 w-full">
+              <AtletaSelect value={a1} onChange={setA1} placeholder="Atleta 1" />
+              <AtletaSelect value={a2} onChange={setA2} placeholder="Atleta 2" />
             </div>
-            <Input
-              type="number"
-              value={s1}
-              onChange={(e) => setS1(e.target.value)}
-              className="w-12 h-8 text-center"
-            />
-            <span className="text-xs font-bold text-muted-foreground">X</span>
-            <Input
-              type="number"
-              value={s2}
-              onChange={(e) => setS2(e.target.value)}
-              className="w-12 h-8 text-center"
-            />
-            <div className="flex flex-col gap-1">
-              <AtletaSelect value={a3} onChange={setA3} />
-              <AtletaSelect value={a4} onChange={setA4} />
+
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                value={s1}
+                onChange={(e) => setS1(e.target.value)}
+                className="w-16 h-10 text-center text-lg font-bold bg-background"
+                placeholder="0"
+              />
+              <span className="text-muted-foreground font-bold">X</span>
+              <Input
+                type="number"
+                value={s2}
+                onChange={(e) => setS2(e.target.value)}
+                className="w-16 h-10 text-center text-lg font-bold bg-background"
+                placeholder="0"
+              />
             </div>
+
+            <div className="flex-1 flex flex-col gap-2 w-full">
+              <AtletaSelect value={a3} onChange={setA3} placeholder="Atleta 3" />
+              <AtletaSelect value={a4} onChange={setA4} placeholder="Atleta 4" />
+            </div>
+
+            <Button
+              size="icon"
+              className="h-10 w-10 shrink-0 hidden md:flex"
+              onClick={handleAdd}
+              title="Salvar Partida"
+              disabled={!a1 || !a2 || !a3 || !a4 || !s1 || !s2}
+            >
+              <Save className="h-5 w-5" />
+            </Button>
           </div>
-          <Button size="sm" className="w-full h-8" onClick={handleAdd}>
-            Registrar Partida
+          <Button
+            className="w-full md:hidden"
+            onClick={handleAdd}
+            disabled={!a1 || !a2 || !a3 || !a4 || !s1 || !s2}
+          >
+            <Save className="mr-2 h-4 w-4" /> Salvar Partida
           </Button>
         </div>
       )}
-      <div className="space-y-2">
+      <div className="space-y-3">
         {grupoPartidas.map((p) => (
           <div
             key={p.id}
-            className="flex items-center justify-between text-sm bg-background border p-2 rounded-md"
+            className="flex items-center justify-between text-sm bg-background border p-3 rounded-lg shadow-sm"
           >
-            <div className="flex-1 text-right">
-              {getAtletaName(p.atleta1_id)} / {getAtletaName(p.atleta2_id)}
+            <div className="flex-1 text-right font-medium overflow-hidden">
+              <div className="truncate">{getAtletaName(p.atleta1_id)}</div>
+              <div className="truncate">{getAtletaName(p.atleta2_id)}</div>
             </div>
-            <div className="px-4 font-bold">
-              {p.score1} x {p.score2}
+            <div className="px-4 py-2 mx-3 font-bold text-lg bg-muted/50 rounded-md whitespace-nowrap shrink-0">
+              {p.score1} <span className="text-muted-foreground mx-1 text-sm">x</span> {p.score2}
             </div>
-            <div className="flex-1 text-left">
-              {getAtletaName(p.atleta3_id)} / {getAtletaName(p.atleta4_id)}
+            <div className="flex-1 text-left font-medium overflow-hidden">
+              <div className="truncate">{getAtletaName(p.atleta3_id)}</div>
+              <div className="truncate">{getAtletaName(p.atleta4_id)}</div>
             </div>
             {!isFinalizado && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 ml-2 text-destructive"
+                className="h-8 w-8 ml-2 text-destructive hover:bg-destructive/10 shrink-0"
                 onClick={() => deletePartida(p.id)}
               >
-                <Trash2 className="h-3 w-3" />
+                <Trash2 className="h-4 w-4" />
               </Button>
             )}
           </div>
         ))}
         {grupoPartidas.length === 0 && (
-          <p className="text-xs text-muted-foreground italic">Nenhuma partida registrada.</p>
+          <div className="text-center p-4 border border-dashed rounded-lg bg-muted/10">
+            <p className="text-sm text-muted-foreground italic">Nenhuma partida registrada.</p>
+          </div>
         )}
       </div>
     </div>
