@@ -124,26 +124,26 @@ export default function GrupoAtletasList({
               )}
             </div>
             {!isFinalizado && ga.status === 'Active' && (
-              <div className="flex gap-1">
+              <div className="flex gap-2">
                 {hasMatches ? (
                   <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 text-muted-foreground hover:bg-muted"
-                    title="Substituir Atleta (Partidas já registradas)"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs px-2 text-muted-foreground hover:bg-muted"
                     onClick={() => openSubDialog(ga.id)}
                   >
-                    <RefreshCcw className="h-3 w-3" />
+                    <RefreshCcw className="h-3 w-3 mr-1.5" />
+                    Substituir
                   </Button>
                 ) : (
                   <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 text-destructive hover:text-destructive hover:bg-destructive/10"
-                    title="Remover Atleta"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs px-2 text-destructive hover:bg-destructive/10 hover:border-destructive/30"
                     onClick={() => deleteGrupoAtleta(ga.id)}
                   >
-                    <Trash2 className="h-3 w-3" />
+                    <Trash2 className="h-3 w-3 mr-1.5" />
+                    Excluir
                   </Button>
                 )}
               </div>

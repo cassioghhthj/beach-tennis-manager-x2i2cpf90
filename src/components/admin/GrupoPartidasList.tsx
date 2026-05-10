@@ -72,7 +72,7 @@ export default function GrupoPartidasList({
 
   const AtletaSelect = ({ value, onChange, placeholder }: any) => (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="w-full h-9 text-sm bg-background">
+      <SelectTrigger className="w-full h-10 text-sm bg-background">
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
@@ -89,52 +89,58 @@ export default function GrupoPartidasList({
     <div className="space-y-4">
       <h3 className="font-semibold text-sm">Partidas</h3>
       {!isFinalizado && (
-        <div className="bg-muted/30 p-3 rounded-lg border space-y-3">
-          <div className="flex flex-col md:flex-row items-center gap-3">
-            <div className="flex-1 flex flex-col gap-2 w-full">
-              <AtletaSelect value={a1} onChange={setA1} placeholder="Atleta 1" />
-              <AtletaSelect value={a2} onChange={setA2} placeholder="Atleta 2" />
+        <div className="bg-muted/30 p-4 rounded-xl border border-muted-foreground/20 space-y-4 shadow-sm">
+          <div className="flex flex-col md:flex-row items-center gap-4">
+            <div className="flex-1 flex flex-col gap-3 w-full">
+              <AtletaSelect value={a1} onChange={setA1} placeholder="Dupla 1 - Atleta A" />
+              <AtletaSelect value={a2} onChange={setA2} placeholder="Dupla 1 - Atleta B" />
             </div>
 
-            <div className="flex items-center gap-2">
-              <Input
-                type="number"
-                value={s1}
-                onChange={(e) => setS1(e.target.value)}
-                className="w-16 h-10 text-center text-lg font-bold bg-background"
-                placeholder="0"
-              />
-              <span className="text-muted-foreground font-bold">X</span>
-              <Input
-                type="number"
-                value={s2}
-                onChange={(e) => setS2(e.target.value)}
-                className="w-16 h-10 text-center text-lg font-bold bg-background"
-                placeholder="0"
-              />
+            <div className="flex flex-col items-center justify-center gap-2 bg-background p-3 rounded-xl shadow-inner border w-full md:w-auto">
+              <div className="flex items-center gap-3">
+                <Input
+                  type="number"
+                  value={s1}
+                  onChange={(e) => setS1(e.target.value)}
+                  className="w-16 h-12 text-center text-2xl font-black bg-muted/50 border-muted-foreground/20"
+                  placeholder="0"
+                  min="0"
+                />
+                <span className="text-muted-foreground font-black text-xl">X</span>
+                <Input
+                  type="number"
+                  value={s2}
+                  onChange={(e) => setS2(e.target.value)}
+                  className="w-16 h-12 text-center text-2xl font-black bg-muted/50 border-muted-foreground/20"
+                  placeholder="0"
+                  min="0"
+                />
+              </div>
             </div>
 
-            <div className="flex-1 flex flex-col gap-2 w-full">
-              <AtletaSelect value={a3} onChange={setA3} placeholder="Atleta 3" />
-              <AtletaSelect value={a4} onChange={setA4} placeholder="Atleta 4" />
+            <div className="flex-1 flex flex-col gap-3 w-full">
+              <AtletaSelect value={a3} onChange={setA3} placeholder="Dupla 2 - Atleta A" />
+              <AtletaSelect value={a4} onChange={setA4} placeholder="Dupla 2 - Atleta B" />
             </div>
 
             <Button
-              size="icon"
-              className="h-10 w-10 shrink-0 hidden md:flex"
+              size="lg"
+              className="h-[104px] w-[104px] shrink-0 hidden md:flex flex-col gap-2 rounded-xl shadow-md transition-all hover:scale-105"
               onClick={handleAdd}
               title="Salvar Partida"
               disabled={!a1 || !a2 || !a3 || !a4 || !s1 || !s2}
             >
-              <Save className="h-5 w-5" />
+              <Save className="h-6 w-6" />
+              <span>Salvar</span>
             </Button>
           </div>
           <Button
-            className="w-full md:hidden"
+            size="lg"
+            className="w-full md:hidden rounded-xl shadow-md"
             onClick={handleAdd}
             disabled={!a1 || !a2 || !a3 || !a4 || !s1 || !s2}
           >
-            <Save className="mr-2 h-4 w-4" /> Salvar Partida
+            <Save className="mr-2 h-5 w-5" /> Salvar Partida
           </Button>
         </div>
       )}
@@ -142,34 +148,47 @@ export default function GrupoPartidasList({
         {grupoPartidas.map((p) => (
           <div
             key={p.id}
-            className="flex items-center justify-between text-sm bg-background border p-3 rounded-lg shadow-sm"
+            className="flex flex-col sm:flex-row items-center justify-between text-sm bg-background border p-4 rounded-xl shadow-sm gap-4"
           >
-            <div className="flex-1 text-right font-medium overflow-hidden">
-              <div className="truncate">{getAtletaName(p.atleta1_id)}</div>
-              <div className="truncate">{getAtletaName(p.atleta2_id)}</div>
+            <div className="flex-1 text-center sm:text-right font-medium w-full sm:w-auto">
+              <div className="truncate text-base">{getAtletaName(p.atleta1_id)}</div>
+              <div className="truncate text-base text-muted-foreground">
+                {getAtletaName(p.atleta2_id)}
+              </div>
             </div>
-            <div className="px-4 py-2 mx-3 font-bold text-lg bg-muted/50 rounded-md whitespace-nowrap shrink-0">
-              {p.score1} <span className="text-muted-foreground mx-1 text-sm">x</span> {p.score2}
+
+            <div className="px-6 py-3 font-black text-2xl bg-muted/50 border rounded-xl whitespace-nowrap shrink-0 flex items-center justify-center min-w-[140px] shadow-inner">
+              {p.score1} <span className="text-muted-foreground/40 mx-4 text-xl">x</span> {p.score2}
             </div>
-            <div className="flex-1 text-left font-medium overflow-hidden">
-              <div className="truncate">{getAtletaName(p.atleta3_id)}</div>
-              <div className="truncate">{getAtletaName(p.atleta4_id)}</div>
+
+            <div className="flex-1 text-center sm:text-left font-medium w-full sm:w-auto">
+              <div className="truncate text-base">{getAtletaName(p.atleta3_id)}</div>
+              <div className="truncate text-base text-muted-foreground">
+                {getAtletaName(p.atleta4_id)}
+              </div>
             </div>
+
             {!isFinalizado && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 ml-2 text-destructive hover:bg-destructive/10 shrink-0"
-                onClick={() => deletePartida(p.id)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              <div className="w-full sm:w-auto flex justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full sm:w-auto text-destructive hover:bg-destructive/10 hover:border-destructive/30 hover:text-destructive"
+                  onClick={() => deletePartida(p.id)}
+                >
+                  <Trash2 className="h-4 w-4 sm:mr-2" />
+                  <span className="sm:hidden ml-2">Excluir</span>
+                  <span className="hidden sm:inline">Excluir</span>
+                </Button>
+              </div>
             )}
           </div>
         ))}
         {grupoPartidas.length === 0 && (
-          <div className="text-center p-4 border border-dashed rounded-lg bg-muted/10">
-            <p className="text-sm text-muted-foreground italic">Nenhuma partida registrada.</p>
+          <div className="text-center p-8 border-2 border-dashed rounded-xl bg-muted/5">
+            <p className="text-sm text-muted-foreground font-medium">
+              Nenhuma partida registrada neste grupo.
+            </p>
           </div>
         )}
       </div>
