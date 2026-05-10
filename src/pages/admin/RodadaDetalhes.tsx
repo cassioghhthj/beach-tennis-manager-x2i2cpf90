@@ -7,6 +7,7 @@ import { ArrowLeft, Plus, Calculator } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import GrupoCard from '@/components/admin/GrupoCard'
 import PodioConfig from '@/components/admin/PodioConfig'
+import ClassificacaoRodada from '@/components/admin/ClassificacaoRodada'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/hooks/use-toast'
 import {
@@ -150,9 +151,10 @@ export default function RodadaDetalhes() {
       </div>
 
       <Tabs defaultValue="grupos" className="w-full">
-        <TabsList className="mb-4">
+        <TabsList className="mb-4 flex flex-wrap h-auto">
           <TabsTrigger value="grupos">Grupos da Rodada</TabsTrigger>
           <TabsTrigger value="podios">Pódios e Premiações</TabsTrigger>
+          <TabsTrigger value="classificacao">Classificação da Rodada</TabsTrigger>
         </TabsList>
 
         <TabsContent value="grupos" className="space-y-6">
@@ -188,6 +190,10 @@ export default function RodadaDetalhes() {
 
         <TabsContent value="podios">
           <PodioConfig rodada={rodada} />
+        </TabsContent>
+
+        <TabsContent value="classificacao">
+          <ClassificacaoRodada rodada={rodada} />
         </TabsContent>
       </Tabs>
 

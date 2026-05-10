@@ -111,6 +111,7 @@ export interface PontuacaoRodada {
   bonus_5x0: number
   pontos_podio_principal: number
   pontos_podio_consolacao: number
+  pontos_manuais: number
   total: number
 }
 
@@ -177,9 +178,10 @@ interface AppState {
   updatePartida: (id: string, p: Partial<Partida>) => Promise<void>
   deletePartida: (id: string) => Promise<void>
   podios: Podio[]
-  salvarPodiosRodada: (rodadaId: string, p: Podio[]) => Promise<void>
+  salvarPodiosRodada: (rodadaId: string, p: Partial<Podio>[]) => Promise<void>
   pontuacoes: PontuacaoRodada[]
   finalizarRodada: (rodadaId: string) => Promise<void>
+  updatePontuacaoManual: (rodadaId: string, atletaId: string, pontos: number) => Promise<void>
   publicacoes: Publicacao[]
   publicarRanking: (
     ligaId: string,
@@ -509,7 +511,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setPartidas((prev) => prev.filter((item) => item.id !== id))
   }
 
-  const salvarPodiosRodada = async (rodadaId: string, novos: Podio[]) => {
+  const salvarPodiosRodada = async (rodadaId: string, novos: Partial<Podio>[]) => {
     await supabase.from('podios').delete().eq('rodada_id', rodadaId)
     if (novos.length > 0) {
       const { data } = await supabase
@@ -543,6 +545,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       setRodadas((prev) => prev.map((r) => (r.id === rodadaId ? (updatedRodada as Rodada) : r)))
     }
 
+    const { data: existingPts } = await supabase
+      .from('pontuacoes_rodada')
+      .select('atleta_id, pontos_manuais')
+      .eq('rodada_id', rodadaId)
+    const manuaisMap = new Map<string, number>()
+    if (existingPts) {
+      existingPts.forEach((p) => {
+        if (p.atleta_id) manuaisMap.set(p.atleta_id, p.pontos_manuais || 0)
+      })
+    }
+
     await supabase.from('pontuacoes_rodada').delete().eq('rodada_id', rodadaId)
 
     const sis = sistemas.find((s) => s.id === rodada.sistema_id)
@@ -566,6 +579,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           bonus_5x0: 0,
           pontos_podio_principal: 0,
           pontos_podio_consolacao: 0,
+          pontos_manuais: manuaisMap.get(id) || 0,
           total: 0,
         })
       }
@@ -673,7 +687,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         (v.pontos_vitorias || 0) +
         (v.bonus_5x0 || 0) +
         (v.pontos_podio_principal || 0) +
-        (v.pontos_podio_consolacao || 0)
+        (v.pontos_podio_consolacao || 0) +
+        (v.pontos_manuais || 0)
       newPts.push(v)
     })
 
@@ -684,6 +699,42 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           const filtered = prev.filter((p) => p.rodada_id !== rodadaId)
           return [...filtered, ...(insertedPts as PontuacaoRodada[])]
         })
+      }
+    }
+  }
+
+  const updatePontuacaoManual = async (rodadaId: string, atletaId: string, pontos: number) => {
+    const existing = pontuacoes.find((p) => p.rodada_id === rodadaId && p.atleta_id === atletaId)
+
+    if (existing) {
+      const newTotal = existing.total - existing.pontos_manuais + pontos
+      const { data } = await supabase
+        .from('pontuacoes_rodada')
+        .update({ pontos_manuais: pontos, total: newTotal })
+        .eq('id', existing.id)
+        .select()
+        .single()
+
+      if (data) {
+        setPontuacoes((prev) =>
+          prev.map((p) => (p.id === existing.id ? (data as PontuacaoRodada) : p)),
+        )
+      }
+    } else {
+      const newPt = {
+        rodada_id: rodadaId,
+        atleta_id: atletaId,
+        pontos_grupo: 0,
+        pontos_vitorias: 0,
+        bonus_5x0: 0,
+        pontos_podio_principal: 0,
+        pontos_podio_consolacao: 0,
+        pontos_manuais: pontos,
+        total: pontos,
+      }
+      const { data } = await supabase.from('pontuacoes_rodada').insert([newPt]).select().single()
+      if (data) {
+        setPontuacoes((prev) => [...prev, data as PontuacaoRodada])
       }
     }
   }
@@ -749,6 +800,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         salvarPodiosRodada,
         pontuacoes,
         finalizarRodada,
+        updatePontuacaoManual,
         publicacoes,
         publicarRanking,
         deletePublicacao,

@@ -65,7 +65,13 @@ export default function PodioConfig({ rodada }: { rodada: Rodada }) {
     const valid = drafts.filter((d) => d.atleta1_id && (!isDuplas || d.atleta2_id)) as Podio[]
     salvarPodiosRodada(
       rodada.id,
-      valid.map((v) => ({ ...v, id: v.id || Math.random().toString(36).substring(2, 9) })),
+      valid.map((v) => {
+        const { id, ...rest } = v
+        const isUUID =
+          id &&
+          /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(id)
+        return isUUID ? v : (rest as any)
+      }),
     )
     toast.success('Pódios salvos com sucesso!')
   }

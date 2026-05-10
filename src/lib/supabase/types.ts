@@ -357,6 +357,7 @@ export type Database = {
           pontos_grupo: number
           pontos_podio_consolacao: number
           pontos_podio_principal: number
+          pontos_manuais: number
           pontos_vitorias: number
           rodada_id: string | null
           total: number
@@ -368,6 +369,7 @@ export type Database = {
           pontos_grupo?: number
           pontos_podio_consolacao?: number
           pontos_podio_principal?: number
+          pontos_manuais?: number
           pontos_vitorias?: number
           rodada_id?: string | null
           total?: number
@@ -379,6 +381,7 @@ export type Database = {
           pontos_grupo?: number
           pontos_podio_consolacao?: number
           pontos_podio_principal?: number
+          pontos_manuais?: number
           pontos_vitorias?: number
           rodada_id?: string | null
           total?: number
@@ -764,6 +767,7 @@ export const Constants = {
 //   bonus_5x0: integer (not null, default: 0)
 //   pontos_podio_principal: integer (not null, default: 0)
 //   pontos_podio_consolacao: integer (not null, default: 0)
+//   pontos_manuais: integer (not null, default: 0)
 //   total: integer (not null, default: 0)
 // Table: publicacoes
 //   id: uuid (not null, default: gen_random_uuid())
