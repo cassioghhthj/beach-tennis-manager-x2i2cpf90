@@ -24,6 +24,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Liga } from '@/stores/useAppStore'
+import { getInitials } from '@/lib/utils'
 
 const formSchema = z.object({
   nome_completo: z.string().min(3, 'Mínimo 3 caracteres'),
@@ -105,8 +106,10 @@ export function AtletaForm({ initialData, onSubmit, onCancel, ligas }: AtletaFor
         <div className="flex items-center gap-4 pb-4">
           <Avatar className="h-20 w-20 border shadow-sm">
             <AvatarImage src={form.watch('avatar_url') || ''} className="object-cover" />
-            <AvatarFallback className="bg-primary/10 text-primary">
-              {form.watch('nome_completo')?.substring(0, 2)?.toUpperCase() || (
+            <AvatarFallback className="bg-primary/10 text-primary text-xl font-bold">
+              {form.watch('nome_completo') ? (
+                getInitials(form.watch('nome_completo'))
+              ) : (
                 <Camera className="h-6 w-6" />
               )}
             </AvatarFallback>

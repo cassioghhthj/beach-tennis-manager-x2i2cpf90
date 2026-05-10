@@ -17,6 +17,7 @@ import { Edit, Plus, Search } from 'lucide-react'
 import useAppStore, { Atleta } from '@/stores/useAppStore'
 import { AtletaForm } from '@/components/AtletaForm'
 import { toast } from 'sonner'
+import { getInitials } from '@/lib/utils'
 
 export default function Atletas() {
   const { atletas, getAtletaLigas, ligas, addAtleta, updateAtleta } = useAppStore()
@@ -95,8 +96,8 @@ export default function Atletas() {
                 <TableCell>
                   <Avatar className="h-10 w-10 border shadow-sm">
                     <AvatarImage src={atleta.avatar_url} className="object-cover" />
-                    <AvatarFallback className="bg-primary/10 text-primary font-bold">
-                      {atleta.nome_completo.substring(0, 2).toUpperCase()}
+                    <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
+                      {getInitials(atleta.nome_completo)}
                     </AvatarFallback>
                   </Avatar>
                 </TableCell>

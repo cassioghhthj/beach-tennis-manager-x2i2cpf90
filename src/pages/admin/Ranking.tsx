@@ -29,6 +29,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Search, Globe } from 'lucide-react'
 import { toast } from 'sonner'
+import { getInitials } from '@/lib/utils'
 
 const R_COLS = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10', 'R11', 'R12']
 
@@ -198,7 +199,9 @@ export default function Ranking() {
                     <TableCell className="font-medium flex items-center gap-2">
                       <Avatar className="h-6 w-6">
                         <AvatarImage src={row.avatar} className="object-cover" />
-                        <AvatarFallback>{row.nome.substring(0, 2)}</AvatarFallback>
+                        <AvatarFallback className="text-[10px] bg-primary/10 text-primary font-bold">
+                          {getInitials(row.nome)}
+                        </AvatarFallback>
                       </Avatar>
                       <span className="truncate">{row.nome}</span>
                     </TableCell>
@@ -242,7 +245,7 @@ export default function Ranking() {
                 <Avatar className="h-16 w-16 border shadow-sm">
                   <AvatarImage src={selectedData.avatar} className="object-cover" />
                   <AvatarFallback className="text-xl font-bold bg-primary/10 text-primary">
-                    {selectedData.nome.substring(0, 2)}
+                    {getInitials(selectedData.nome)}
                   </AvatarFallback>
                 </Avatar>
                 <div>

@@ -5,6 +5,7 @@ import { Medal, Calendar, Users, Trophy } from 'lucide-react'
 import useAppStore from '@/stores/useAppStore'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
+import { getInitials } from '@/lib/utils'
 import {
   Table,
   TableBody,
@@ -197,7 +198,7 @@ export default function Index() {
                               <Avatar className="h-12 w-12 border shadow-sm ring-2 ring-background">
                                 <AvatarImage src={r.avatar} className="object-cover" />
                                 <AvatarFallback className="bg-primary/10 text-primary font-bold">
-                                  {r.nome.substring(0, 2).toUpperCase()}
+                                  {getInitials(r.nome)}
                                 </AvatarFallback>
                               </Avatar>
                               <span className="truncate text-base font-bold">{r.nome}</span>

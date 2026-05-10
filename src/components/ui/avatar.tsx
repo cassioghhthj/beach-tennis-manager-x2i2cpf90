@@ -19,13 +19,28 @@ Avatar.displayName = AvatarPrimitive.Root.displayName
 const AvatarImage = React.forwardRef<
   React.ElementRef<typeof AvatarPrimitive.Image>,
   React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Image>
->(({ className, ...props }, ref) => (
-  <AvatarPrimitive.Image
-    ref={ref}
-    className={cn('aspect-square h-full w-full', className)}
-    {...props}
-  />
-))
+>(({ className, src, ...props }, ref) => {
+  // Ignora imagens geradas aleatoriamente (placeholders antigos)
+  const isRandom =
+    typeof src === 'string' &&
+    (src.includes('usecurling.com') ||
+      src.includes('pravatar') ||
+      src.includes('ui-avatars') ||
+      src.includes('cloudflare-ipfs.com') ||
+      src.includes('loremflickr') ||
+      src.includes('fakerapi') ||
+      src.includes('unsplash.com'))
+  const finalSrc = isRandom ? undefined : src
+
+  return (
+    <AvatarPrimitive.Image
+      ref={ref}
+      src={finalSrc}
+      className={cn('aspect-square h-full w-full', className)}
+      {...props}
+    />
+  )
+})
 AvatarImage.displayName = AvatarPrimitive.Image.displayName
 
 const AvatarFallback = React.forwardRef<
