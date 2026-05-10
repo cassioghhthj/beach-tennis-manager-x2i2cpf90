@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import {
   Table,
   TableBody,
@@ -10,17 +10,12 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import useAppStore, { Rodada } from '@/stores/useAppStore'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Pencil, Check, X, Calculator } from 'lucide-react'
+import { Calculator } from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 
 export default function ClassificacaoRodada({ rodada }: { rodada: Rodada }) {
-  const { pontuacoes, atletas, grupos, grupoAtletas, finalizarRodada, updatePontuacaoManual } =
-    useAppStore()
-
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [editValue, setEditValue] = useState<string>('')
+  const { pontuacoes, atletas, grupos, grupoAtletas, finalizarRodada } = useAppStore()
 
   const atletasDaRodada = useMemo(() => {
     const rGroups = grupos.filter((g) => g.rodada_id === rodada.id).map((g) => g.id)
@@ -53,23 +48,6 @@ export default function ClassificacaoRodada({ rodada }: { rodada: Rodada }) {
       (a, b) => b.total - a.total || a.atleta.nome_completo.localeCompare(b.atleta.nome_completo),
     )
   }, [pontuacoes, atletasDaRodada, rodada.id])
-
-  const handleEdit = (atletaId: string, currentVal: number) => {
-    setEditingId(atletaId)
-    setEditValue(currentVal.toString())
-  }
-
-  const handleSaveEdit = async (atletaId: string) => {
-    const val = parseInt(editValue, 10)
-    if (isNaN(val)) {
-      toast.error('Valor inválido')
-      return
-    }
-
-    await updatePontuacaoManual(rodada.id, atletaId, val)
-    toast.success('Pontuação manual atualizada')
-    setEditingId(null)
-  }
 
   const handleRecalcular = async () => {
     await finalizarRodada(rodada.id)
@@ -127,51 +105,9 @@ export default function ClassificacaoRodada({ rodada }: { rodada: Rodada }) {
                     <TableCell className="text-center">{item.bonus_5x0}</TableCell>
                     <TableCell className="text-center">{item.pontos_podio}</TableCell>
                     <TableCell className="text-center">
-                      {editingId === item.atleta.id ? (
-                        <div className="flex items-center justify-center gap-1">
-                          <Input
-                            value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
-                            className="w-16 h-8 text-center"
-                            type="number"
-                            autoFocus
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') handleSaveEdit(item.atleta.id)
-                              if (e.key === 'Escape') setEditingId(null)
-                            }}
-                          />
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8 text-green-600"
-                            onClick={() => handleSaveEdit(item.atleta.id)}
-                          >
-                            <Check className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8 text-destructive"
-                            onClick={() => setEditingId(null)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <div
-                          className="flex items-center justify-center gap-2 group cursor-pointer"
-                          onClick={() => handleEdit(item.atleta.id, item.pontos_manuais)}
-                        >
-                          <span
-                            className={item.pontos_manuais !== 0 ? 'font-bold text-primary' : ''}
-                          >
-                            {item.pontos_manuais > 0
-                              ? `+${item.pontos_manuais}`
-                              : item.pontos_manuais}
-                          </span>
-                          <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground" />
-                        </div>
-                      )}
+                      <span className={item.pontos_manuais !== 0 ? 'font-bold text-primary' : ''}>
+                        {item.pontos_manuais > 0 ? `+${item.pontos_manuais}` : item.pontos_manuais}
+                      </span>
                     </TableCell>
                     <TableCell className="text-center font-bold text-primary text-base">
                       {item.total}
