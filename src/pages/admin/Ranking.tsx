@@ -27,7 +27,7 @@ import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Search, Trophy, Globe } from 'lucide-react'
+import { Search, Globe } from 'lucide-react'
 import { toast } from 'sonner'
 
 const R_COLS = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10', 'R11', 'R12']
@@ -57,19 +57,18 @@ export default function Ranking() {
           total: 0,
           rodadas: {} as Record<string, number>,
           jogadas: 0,
-          podios: 0,
-          bonus_5x0: 0,
         })
       }
       const st = map.get(p.atleta_id)
       const rObj = rLigas.find((r) => r.id === p.rodada_id)
       if (rObj) {
-        st.rodadas[rObj.numero] = p.total
+        const key = rObj.numero.toUpperCase().startsWith('R')
+          ? rObj.numero.toUpperCase()
+          : `R${rObj.numero}`
+        st.rodadas[key] = p.total
       }
       st.total += p.total
       st.jogadas += 1
-      st.bonus_5x0 += p.bonus_5x0
-      if (p.pontos_podio_principal > 0 || p.pontos_podio_consolacao > 0) st.podios += 1
     })
 
     let results = Array.from(map.values()).sort((a, b) => b.total - a.total)
@@ -96,8 +95,6 @@ export default function Ranking() {
       avatar: r.avatar,
       categoria: r.categoria,
       total: r.total,
-      podios: r.podios,
-      bonus_5x0: r.bonus_5x0,
       media: r.jogadas > 0 ? (r.total / r.jogadas).toFixed(1) : '0.0',
       rodadas: r.rodadas,
     }))
@@ -166,8 +163,6 @@ export default function Ranking() {
                 ))}
                 <TableHead className="text-center font-bold text-primary">Total</TableHead>
                 <TableHead className="text-center">Média</TableHead>
-                <TableHead className="text-center">Pódios</TableHead>
-                <TableHead className="text-center">5x0</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -205,18 +200,12 @@ export default function Ranking() {
                       {row.total}
                     </TableCell>
                     <TableCell className="text-center text-sm">{media}</TableCell>
-                    <TableCell className="text-center text-sm font-medium">
-                      {row.podios > 0 ? `${row.podios} 🏆` : '-'}
-                    </TableCell>
-                    <TableCell className="text-center text-sm font-medium text-yellow-600">
-                      {row.bonus_5x0 > 0 ? row.bonus_5x0 : '-'}
-                    </TableCell>
                   </TableRow>
                 )
               })}
               {rankingData.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={19} className="h-24 text-center text-muted-foreground">
+                  <TableCell colSpan={16} className="h-24 text-center text-muted-foreground">
                     Nenhum dado encontrado para os filtros selecionados.
                   </TableCell>
                 </TableRow>
@@ -267,22 +256,6 @@ export default function Ranking() {
                       {selectedData.jogadas > 0
                         ? (selectedData.total / selectedData.jogadas).toFixed(1)
                         : '0.0'}
-                    </span>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-4 flex flex-col items-center justify-center text-center">
-                    <span className="text-sm text-muted-foreground mb-1 flex items-center gap-1">
-                      <Trophy className="h-3 w-3" /> Pódios
-                    </span>
-                    <span className="text-2xl font-bold text-amber-500">{selectedData.podios}</span>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-4 flex flex-col items-center justify-center text-center">
-                    <span className="text-sm text-muted-foreground mb-1">Pts Bônus 5x0</span>
-                    <span className="text-2xl font-bold text-yellow-600">
-                      {selectedData.bonus_5x0}
                     </span>
                   </CardContent>
                 </Card>
