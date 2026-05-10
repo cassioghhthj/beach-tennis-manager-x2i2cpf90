@@ -156,7 +156,6 @@ export default function Index() {
                           <TableHead className="w-20 text-center font-bold">Pos</TableHead>
                           <TableHead className="font-bold">Atleta</TableHead>
                           <TableHead className="text-center font-bold">Categoria</TableHead>
-                          <TableHead className="text-center font-bold">Pódios</TableHead>
                           <TableHead className="text-center font-bold text-primary">
                             Pontos
                           </TableHead>
@@ -181,6 +180,13 @@ export default function Index() {
                                 <Badge className="bg-amber-600 hover:bg-amber-700 px-2 py-0.5 text-sm shadow-sm">
                                   3º
                                 </Badge>
+                              ) : idx < 8 ? (
+                                <Badge
+                                  variant="secondary"
+                                  className="bg-primary/10 text-primary hover:bg-primary/20 border-primary/20 px-2 py-0.5 text-sm shadow-sm"
+                                >
+                                  {r.posicao}º
+                                </Badge>
                               ) : (
                                 <span className="text-muted-foreground font-semibold">
                                   {r.posicao}º
@@ -198,18 +204,6 @@ export default function Index() {
                             </TableCell>
                             <TableCell className="text-center text-muted-foreground font-medium">
                               {r.categoria}
-                            </TableCell>
-                            <TableCell className="text-center font-medium">
-                              {r.podios > 0 ? (
-                                <Badge
-                                  variant="secondary"
-                                  className="bg-primary/5 text-primary border-primary/20"
-                                >
-                                  {r.podios} 🏆
-                                </Badge>
-                              ) : (
-                                '-'
-                              )}
                             </TableCell>
                             <TableCell className="text-center font-black text-primary text-xl">
                               {r.total}

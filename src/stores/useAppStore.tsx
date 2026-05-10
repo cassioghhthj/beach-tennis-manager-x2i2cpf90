@@ -122,8 +122,8 @@ export interface RankingSnapshotItem {
   avatar?: string
   categoria: string
   total: number
-  podios: number
-  bonus_5x0: number
+  podios?: number
+  bonus_5x0?: number
   media: string
   rodadas: Record<string, number>
 }

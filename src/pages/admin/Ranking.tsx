@@ -62,9 +62,8 @@ export default function Ranking() {
       const st = map.get(p.atleta_id)
       const rObj = rLigas.find((r) => r.id === p.rodada_id)
       if (rObj) {
-        const key = rObj.numero.toUpperCase().startsWith('R')
-          ? rObj.numero.toUpperCase()
-          : `R${rObj.numero}`
+        const numMatch = rObj.numero.match(/\d+/)
+        const key = numMatch ? `R${parseInt(numMatch[0], 10)}` : `R${rObj.numero}`
         st.rodadas[key] = p.total
       }
       st.total += p.total
@@ -168,7 +167,6 @@ export default function Ranking() {
             <TableBody>
               {rankingData.map((row, idx) => {
                 const media = row.jogadas > 0 ? (row.total / row.jogadas).toFixed(1) : '0.0'
-                const isLeader = idx === 0
                 return (
                   <TableRow
                     key={row.atleta_id}
@@ -176,8 +174,21 @@ export default function Ranking() {
                     onClick={() => setSelectedAtletaId(row.atleta_id)}
                   >
                     <TableCell className="text-center font-medium">
-                      {isLeader ? (
+                      {idx === 0 ? (
                         <Badge className="bg-yellow-500 hover:bg-yellow-600 px-1.5">
+                          {idx + 1}
+                        </Badge>
+                      ) : idx === 1 ? (
+                        <Badge className="bg-slate-300 text-slate-800 hover:bg-slate-400 px-1.5">
+                          {idx + 1}
+                        </Badge>
+                      ) : idx === 2 ? (
+                        <Badge className="bg-amber-600 hover:bg-amber-700 px-1.5">{idx + 1}</Badge>
+                      ) : idx < 8 ? (
+                        <Badge
+                          variant="secondary"
+                          className="bg-primary/10 text-primary hover:bg-primary/20 px-1.5"
+                        >
                           {idx + 1}
                         </Badge>
                       ) : (
