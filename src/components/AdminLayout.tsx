@@ -12,6 +12,7 @@ import {
   Search,
   History,
   MessageSquareShare,
+  Settings,
 } from 'lucide-react'
 import {
   SidebarProvider,
@@ -54,6 +55,7 @@ export default function AdminLayout() {
     { name: 'Ranking Interno', to: '/admin/ranking', icon: Medal },
     { name: 'Histórico de Publicações', to: '/admin/publicacoes', icon: History },
     { name: 'Config. WhatsApp', to: '/admin/whatsapp', icon: MessageSquareShare },
+    { name: 'Minha Conta', to: '/admin/configuracoes', icon: Settings },
   ]
 
   return (
@@ -133,6 +135,12 @@ export default function AdminLayout() {
                   <DropdownMenuItem asChild>
                     <Link to="/" className="cursor-pointer">
                       Ver Portal Público
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/admin/configuracoes" className="cursor-pointer">
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Minha Conta</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem
