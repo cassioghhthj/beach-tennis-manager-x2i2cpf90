@@ -1,3 +1,4 @@
+import { useState, useMemo, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -14,16 +15,50 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 export default function Index() {
   const { publicacoes } = useAppStore()
 
-  const latestPubs = publicacoes
-    ? [...publicacoes].sort(
-        (a, b) => new Date(b.data_publicacao).getTime() - new Date(a.data_publicacao).getTime(),
-      )
-    : []
-  const latestPub = latestPubs.length > 0 ? latestPubs[0] : null
+  const latestPublicationsByLeague = useMemo(() => {
+    if (!publicacoes) return []
+    const map = new Map<string, any>()
+
+    const sorted = [...publicacoes].sort(
+      (a, b) => new Date(b.data_publicacao).getTime() - new Date(a.data_publicacao).getTime(),
+    )
+
+    for (const pub of sorted) {
+      const key = pub.liga_id || pub.id
+      if (!map.has(key)) {
+        map.set(key, pub)
+      }
+    }
+
+    return Array.from(map.values())
+  }, [publicacoes])
+
+  const [selectedLigaId, setSelectedLigaId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (
+      latestPublicationsByLeague.length > 0 &&
+      (!selectedLigaId ||
+        !latestPublicationsByLeague.find((p) => (p.liga_id || p.id) === selectedLigaId))
+    ) {
+      setSelectedLigaId(latestPublicationsByLeague[0].liga_id || latestPublicationsByLeague[0].id)
+    }
+  }, [latestPublicationsByLeague, selectedLigaId])
+
+  const selectedPub =
+    latestPublicationsByLeague.find((p) => (p.liga_id || p.id) === selectedLigaId) || null
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <header className="border-b bg-card shadow-sm sticky top-0 z-10">
@@ -129,18 +164,35 @@ export default function Index() {
               <h2 className="text-3xl font-bold text-foreground mb-2">Classificação Oficial</h2>
             </div>
 
-            {latestPub ? (
+            {latestPublicationsByLeague.length > 1 && (
+              <div className="flex justify-center mb-8">
+                <Select value={selectedLigaId || ''} onValueChange={setSelectedLigaId}>
+                  <SelectTrigger className="w-full max-w-xs shadow-sm bg-background border-primary/20">
+                    <SelectValue placeholder="Selecione a Liga" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {latestPublicationsByLeague.map((pub) => (
+                      <SelectItem key={pub.liga_id || pub.id} value={pub.liga_id || pub.id}>
+                        {pub.liga_nome} - {pub.temporada}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {selectedPub ? (
               <div className="max-w-5xl mx-auto">
                 <div className="mb-6 text-center">
                   <Badge
                     variant="outline"
                     className="text-lg py-1.5 px-6 border-primary/50 text-primary shadow-sm bg-background"
                   >
-                    {latestPub.liga_nome} - {latestPub.temporada}
+                    {selectedPub.liga_nome} - {selectedPub.temporada}
                   </Badge>
                   <p className="text-sm text-muted-foreground mt-3 font-medium">
                     Atualizado em{' '}
-                    {new Date(latestPub.data_publicacao).toLocaleDateString('pt-BR', {
+                    {new Date(selectedPub.data_publicacao).toLocaleDateString('pt-BR', {
                       day: '2-digit',
                       month: 'long',
                       year: 'numeric',
@@ -163,7 +215,7 @@ export default function Index() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {(latestPub.ranking as any[]).map((r: any, idx: number) => (
+                        {(selectedPub.ranking as any[]).map((r: any, idx: number) => (
                           <TableRow
                             key={r.atleta_id}
                             className="transition-colors hover:bg-muted/30"
