@@ -8,18 +8,7 @@ export default function Layout() {
         <div className="max-w-7xl mx-auto flex items-center justify-between w-full">
           <div className="flex-1 hidden sm:flex"></div>
 
-          <div className="flex items-center justify-center gap-4 sm:gap-6 flex-1">
-            <Link
-              to="/"
-              className="flex items-center justify-center hover:scale-105 transition-transform duration-300 bg-slate-900 rounded-full p-1 h-12 w-12 sm:h-16 sm:w-16 shadow-sm"
-            >
-              <img
-                src="https://i.postimg.cc/KYB0J8rS/fe-e-forca-trn.png"
-                alt="Fé e Força"
-                className="w-full h-full object-contain drop-shadow-sm scale-110"
-              />
-            </Link>
-            <div className="h-10 w-px bg-slate-200 hidden sm:block" />
+          <div className="flex items-center justify-center flex-1">
             <Link
               to="/"
               className="flex items-center justify-center hover:scale-105 transition-transform duration-300"
