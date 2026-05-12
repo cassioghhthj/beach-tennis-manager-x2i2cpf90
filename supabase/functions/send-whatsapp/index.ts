@@ -88,7 +88,6 @@ Deno.serve(async (req: Request) => {
     }
 
     if (api_token) {
-      headers['Authorization'] = `Bearer ${api_token}`
       headers['X-Api-Key'] = api_token
     }
 
@@ -100,11 +99,17 @@ Deno.serve(async (req: Request) => {
 
     if (!wahaRes.ok) {
       const errorText = await wahaRes.text()
-      console.error('WAHA API Error:', errorText)
-      return new Response(JSON.stringify({ error: `WAHA API Error: ${wahaRes.status}` }), {
-        status: 502,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      const errorMessage = errorText || wahaRes.statusText || 'Erro desconhecido'
+      console.error('WAHA API Error:', wahaRes.status, errorMessage)
+      return new Response(
+        JSON.stringify({
+          error: `WAHA API Error ${wahaRes.status}: ${errorMessage}`,
+        }),
+        {
+          status: 502,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      )
     }
 
     const result = await wahaRes.json()
