@@ -51,7 +51,18 @@ export const sendWhatsappMessage = async (phone: string, message: string) => {
   const { data, error } = await supabase.functions.invoke('send-whatsapp', {
     body: { phone, message },
   })
-  if (error) throw error
+  if (error) {
+    let message = error.message
+    const response = (error as any).context
+    if (response instanceof Response) {
+      const errorBody = await response
+        .clone()
+        .json()
+        .catch(() => null)
+      message = errorBody?.error || message
+    }
+    throw new Error(message)
+  }
   if (data.error) throw new Error(data.error)
   return data
 }
