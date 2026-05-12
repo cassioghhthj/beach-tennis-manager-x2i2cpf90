@@ -39,6 +39,11 @@ export default function GrupoClassificacao({ grupo }: { grupo: Grupo }) {
 
     const getRule = (key: string) => snapshot.find((r) => r.chave === key)?.valor_pontos || 0
 
+    const presencaPoints = getRule('pontos_presenca')
+    Object.values(stats).forEach((s: any) => {
+      s.points += presencaPoints
+    })
+
     grupoPartidas.forEach((p) => {
       const isP1Win = p.score1 > p.score2
       const isP2Win = p.score2 > p.score1

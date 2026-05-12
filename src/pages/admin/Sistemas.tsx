@@ -46,6 +46,7 @@ const defaultGeralKeys = {
   pos_19: 5,
   pos_20: 0,
   bonus_5x0: 5,
+  pontos_presenca: 0,
   podio_principal_1: 50,
   podio_principal_2: 40,
   podio_principal_3: 30,
@@ -62,6 +63,7 @@ const defaultVitoriasKeys = {
   derrota_1x4: 30,
   derrota_0x5: 20,
   bonus_5x0: 5,
+  pontos_presenca: 0,
   podio_principal_1: 50,
   podio_principal_2: 40,
   podio_principal_3: 30,
@@ -340,6 +342,14 @@ export default function Sistemas() {
                       type="number"
                       value={formData['bonus_5x0'] ?? ''}
                       onChange={(e) => handleChange('bonus_5x0', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Presença no Grupo</Label>
+                    <Input
+                      type="number"
+                      value={formData['pontos_presenca'] ?? ''}
+                      onChange={(e) => handleChange('pontos_presenca', e.target.value)}
                     />
                   </div>
                 </div>

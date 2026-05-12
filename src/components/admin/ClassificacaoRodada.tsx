@@ -37,9 +37,10 @@ export default function ClassificacaoRodada({ rodada }: { rodada: Rodada }) {
         pontos_grupo: p?.pontos_grupo || 0,
         pontos_vitorias: p?.pontos_vitorias || 0,
         bonus_5x0: p?.bonus_5x0 || 0,
+        pontos_presenca: p?.pontos_presenca || 0,
         pontos_podio: (p?.pontos_podio_principal || 0) + (p?.pontos_podio_consolacao || 0),
         pontos_manuais: p?.pontos_manuais || 0,
-        total: p?.total || 0,
+        total: (p?.total || 0) + (p?.pontos_presenca || 0),
         hasScore: !!p,
       }
     })
@@ -83,6 +84,7 @@ export default function ClassificacaoRodada({ rodada }: { rodada: Rodada }) {
                   <TableHead className="text-center">Pts Grupo</TableHead>
                   <TableHead className="text-center">Pts Vitórias</TableHead>
                   <TableHead className="text-center">Bônus 5x0</TableHead>
+                  <TableHead className="text-center">Presença</TableHead>
                   <TableHead className="text-center">Pódios</TableHead>
                   <TableHead className="text-center">Manual</TableHead>
                   <TableHead className="text-center font-bold text-primary">Total</TableHead>
@@ -103,6 +105,7 @@ export default function ClassificacaoRodada({ rodada }: { rodada: Rodada }) {
                     <TableCell className="text-center">{item.pontos_grupo}</TableCell>
                     <TableCell className="text-center">{item.pontos_vitorias}</TableCell>
                     <TableCell className="text-center">{item.bonus_5x0}</TableCell>
+                    <TableCell className="text-center">{item.pontos_presenca}</TableCell>
                     <TableCell className="text-center">{item.pontos_podio}</TableCell>
                     <TableCell className="text-center">
                       <span className={item.pontos_manuais !== 0 ? 'font-bold text-primary' : ''}>
