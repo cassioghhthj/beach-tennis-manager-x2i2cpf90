@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Medal, Calendar, Users, Trophy } from 'lucide-react'
 import useAppStore from '@/stores/useAppStore'
@@ -61,37 +60,6 @@ export default function Index() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <header className="border-b bg-card shadow-sm sticky top-0 z-10">
-        <div className="container mx-auto px-4 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-14 h-14 bg-background rounded-md shadow-sm p-1 flex items-center justify-center">
-              <img
-                src="https://i.postimg.cc/KYB0J8rS/fe-e-forca-trn.png"
-                alt="Fé e Força"
-                className="w-full h-full object-contain drop-shadow-sm scale-110"
-              />
-            </div>
-            <div className="flex flex-col">
-              <span className="font-heading font-extrabold text-xl uppercase tracking-tight text-foreground">
-                Arena Beach
-              </span>
-              <span className="text-sm font-medium text-primary uppercase tracking-wider">
-                Luiziana
-              </span>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <Button
-              asChild
-              variant="outline"
-              className="hidden sm:flex border-primary text-primary hover:bg-primary hover:text-primary-foreground"
-            >
-              <Link to="/login">Área Restrita</Link>
-            </Button>
-          </div>
-        </div>
-      </header>
-
       <main className="flex-1">
         <section className="relative py-20 bg-card overflow-hidden">
           <div className="absolute inset-0 bg-secondary/90 z-0">
