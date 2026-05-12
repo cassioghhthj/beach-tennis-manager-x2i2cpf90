@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from '@/hooks/use-auth'
 import NotFound from './pages/NotFound'
 import Login from './pages/Login'
 import Index from './pages/Index'
+import Layout from './components/Layout'
 import AdminLayout from './components/AdminLayout'
 import Dashboard from './pages/admin/Dashboard'
 import Ligas from './pages/admin/Ligas'
@@ -34,7 +35,9 @@ const AppRoutes = () => (
       <Toaster />
       <Sonner />
       <Routes>
-        <Route path="/" element={<Index />} />
+        <Route element={<Layout />}>
+          <Route path="/" element={<Index />} />
+        </Route>
         <Route path="/login" element={<Login />} />
         <Route
           path="/admin"
