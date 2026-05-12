@@ -66,12 +66,9 @@ export default function Index() {
           <div className="flex items-center gap-3">
             <div className="w-14 h-14 bg-background rounded-md shadow-sm p-1 flex items-center justify-center">
               <img
-                src="/logo.png"
-                alt="Arena Beach Luiziana Logo"
-                className="w-full h-full object-contain"
-                onError={(e) => {
-                  e.currentTarget.src = 'https://img.usecurling.com/i?q=tennis&color=yellow'
-                }}
+                src="https://i.postimg.cc/KYB0J8rS/fe-e-forca-trn.png"
+                alt="Fé e Força"
+                className="w-full h-full object-contain drop-shadow-sm scale-110"
               />
             </div>
             <div className="flex flex-col">
@@ -282,24 +279,6 @@ export default function Index() {
           </div>
         </section>
       </main>
-
-      <footer className="bg-secondary py-8 border-t border-secondary-foreground/10">
-        <div className="container mx-auto px-4 text-center flex flex-col items-center gap-4">
-          <div className="w-12 h-12 grayscale opacity-50">
-            <img
-              src="/logo.png"
-              alt="Logo Footer"
-              className="w-full h-full object-contain"
-              onError={(e) => {
-                e.currentTarget.src = 'https://img.usecurling.com/i?q=tennis&color=yellow'
-              }}
-            />
-          </div>
-          <p className="text-secondary-foreground/60 text-sm">
-            © {new Date().getFullYear()} Arena Beach Luiziana. Todos os direitos reservados.
-          </p>
-        </div>
-      </footer>
     </div>
   )
 }
