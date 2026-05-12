@@ -64,9 +64,9 @@ export default function Index() {
         <section className="relative py-20 bg-card overflow-hidden">
           <div className="absolute inset-0 bg-secondary/90 z-0">
             <img
-              src="https://img.usecurling.com/p/1920/1080?q=beach%20tennis%20court&color=black"
-              alt="Background"
-              className="w-full h-full object-cover opacity-20"
+              src="https://i.postimg.cc/6QM0pbKR/capa-facebook-arena.png"
+              alt="Capa Arena Beach Luiziana"
+              className="w-full h-full object-cover opacity-30 mix-blend-overlay"
             />
           </div>
           <div className="container relative z-10 mx-auto px-4 text-center space-y-6">
