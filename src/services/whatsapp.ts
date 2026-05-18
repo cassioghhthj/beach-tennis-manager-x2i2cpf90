@@ -55,7 +55,8 @@ export const processarTemplateWhatsApp = (
   Object.keys(dados).forEach((key) => {
     const val = dados[key]
     const safeValue = val !== null && val !== undefined ? String(val) : '0'
-    mensagem = mensagem.split(`{${key}}`).join(safeValue)
+    const regex = new RegExp(`\\{\\s*${key}\\s*\\}`, 'g')
+    mensagem = mensagem.replace(regex, safeValue)
   })
   return mensagem
 }

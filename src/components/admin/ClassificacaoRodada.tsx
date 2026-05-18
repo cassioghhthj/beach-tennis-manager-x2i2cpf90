@@ -125,6 +125,7 @@ export default function ClassificacaoRodada({ rodada }: { rodada: Rodada }) {
           liga: nomeLiga,
           vitorias,
           derrotas,
+          pontos_presenca: item.pontos_presenca,
           pontos_grupo: item.pontos_grupo,
           pontos_vitorias: item.pontos_vitorias,
           bonus_5x0: item.bonus_5x0,
@@ -136,7 +137,20 @@ export default function ClassificacaoRodada({ rodada }: { rodada: Rodada }) {
               : 'Bora treinar mais que na próxima você amassa!',
         }
 
-        const mensagem = processarTemplateWhatsApp(config.mensagem_template, dados)
+        let safeTemplate = config.mensagem_template || ''
+
+        // Ajuste retroativo para templates que ainda usavam as variáveis antigas
+        if (
+          safeTemplate.includes('Presença no Grupo: {pontos_grupo}') &&
+          !safeTemplate.includes('{pontos_presenca}')
+        ) {
+          safeTemplate = safeTemplate.replace(
+            'Presença no Grupo: {pontos_grupo}',
+            'Presença na Rodada: {pontos_presenca}',
+          )
+        }
+
+        const mensagem = processarTemplateWhatsApp(safeTemplate, dados)
 
         try {
           await sendWhatsappMessage(telefone, mensagem)

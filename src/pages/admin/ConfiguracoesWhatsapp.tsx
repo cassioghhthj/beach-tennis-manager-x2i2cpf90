@@ -38,8 +38,7 @@ const DEFAULT_TEMPLATE = `Olá {nome_atleta}! 🎾 Confira seu desempenho detalh
 ❌ Derrotas: {derrotas}
 
 📊 Detalhamento de Pontos:
-• Presença no Grupo: {pontos_grupo}
-• Desempenho em Quadra: {pontos_vitorias}
+• Presença na Rodada: {pontos_presenca}
 • Bônus Especial (5x0): {bonus_5x0}
 • Pódio/Premiação: {pontos_podio}
 🏆 TOTAL DA RODADA: {pontuacao} pontos.
@@ -78,7 +77,8 @@ export default function ConfiguracoesWhatsapp() {
       liga: 'Liga Beach Tennis',
       vitorias: 3,
       derrotas: 1,
-      pontos_grupo: 10,
+      pontos_presenca: 10,
+      pontos_grupo: 0,
       pontos_vitorias: 30,
       bonus_5x0: 5,
       pontos_podio: 20,
@@ -108,15 +108,20 @@ export default function ConfiguracoesWhatsapp() {
       try {
         const config = await getWhatsappConfig()
         if (config) {
+          let msgTemplate = config.mensagem_template || DEFAULT_TEMPLATE
+          if (
+            msgTemplate ===
+              'Olá {nome_atleta}, seu resultado da rodada saiu! Você conquistou {pontuacao} pontos.' ||
+            msgTemplate.includes('Desempenho em Quadra')
+          ) {
+            msgTemplate = DEFAULT_TEMPLATE
+          }
+
           form.reset({
             api_url: config.api_url || '',
             api_token: config.api_token || '',
             session_name: config.session_name || 'default',
-            mensagem_template:
-              config.mensagem_template ===
-              'Olá {nome_atleta}, seu resultado da rodada saiu! Você conquistou {pontuacao} pontos.'
-                ? DEFAULT_TEMPLATE
-                : config.mensagem_template || DEFAULT_TEMPLATE,
+            mensagem_template: msgTemplate,
           })
         }
       } catch (error) {
@@ -231,9 +236,9 @@ export default function ConfiguracoesWhatsapp() {
                     </FormControl>
                     <FormDescription>
                       Variáveis disponíveis: {'{nome_atleta}'}, {'{pontuacao}'}, {'{rodada}'},{' '}
-                      {'{liga}'}, {'{vitorias}'}, {'{derrotas}'}, {'{pontos_grupo}'},{' '}
-                      {'{pontos_vitorias}'}, {'{bonus_5x0}'}, {'{pontos_podio}'},{' '}
-                      {'{mensagem_otimista}'}
+                      {'{liga}'}, {'{vitorias}'}, {'{derrotas}'}, {'{pontos_presenca}'},{' '}
+                      {'{pontos_grupo}'}, {'{pontos_vitorias}'}, {'{bonus_5x0}'}, {'{pontos_podio}'}
+                      , {'{mensagem_otimista}'}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
