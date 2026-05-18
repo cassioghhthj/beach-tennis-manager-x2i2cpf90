@@ -10,6 +10,7 @@ import PodioConfig from '@/components/admin/PodioConfig'
 import ClassificacaoRodada from '@/components/admin/ClassificacaoRodada'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/hooks/use-toast'
+import { supabase } from '@/lib/supabase/client'
 import {
   Dialog,
   DialogContent,
@@ -85,7 +86,7 @@ export default function RodadaDetalhes() {
     setConfirmDialogOpen(true)
   }
 
-  const confirmStatusChange = () => {
+  const confirmStatusChange = async () => {
     if (!rodada || !transitionDirection) return
 
     const isForward = transitionDirection === 'forward'
@@ -97,7 +98,15 @@ export default function RodadaDetalhes() {
     }
 
     if (isForward && nextStatus === 'Round Finalized') {
-      finalizarRodada(rodada.id)
+      await finalizarRodada(rodada.id)
+      await (supabase.rpc as any)('processar_presenca_rodada', { p_rodada_id: rodada.id })
+
+      toast({
+        title: 'Status atualizado',
+        description: `O status da rodada foi alterado e a pontuação calculada.`,
+      })
+      setTimeout(() => window.location.reload(), 1500)
+      return
     } else {
       updateRodada(rodada.id, { status: nextStatus })
     }

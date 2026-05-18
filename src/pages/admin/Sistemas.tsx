@@ -19,10 +19,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Star, Copy, Pencil, Info } from 'lucide-react'
+import { Star, Copy, Pencil } from 'lucide-react'
 import useAppStore, { SistemaPontuacao } from '@/stores/useAppStore'
 import { toast } from 'sonner'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
 const defaultGeralKeys = {
   pos_1: 180,
@@ -144,10 +143,7 @@ export default function Sistemas() {
     }))
 
     updateRegrasSistema(editingId, novasRegras)
-    toast.success('Sistema atualizado com sucesso!', {
-      description:
-        'Aviso: sem banco de dados, as alterações serão perdidas ao recarregar a página.',
-    })
+    toast.success('Sistema atualizado com sucesso!')
     setEditingId(null)
   }
 
@@ -165,16 +161,6 @@ export default function Sistemas() {
           <Star className="mr-2 h-4 w-4" /> Novo Sistema
         </Button>
       </div>
-
-      <Alert className="bg-blue-50/50 text-blue-900 border-blue-200 dark:bg-blue-950/50 dark:text-blue-200 dark:border-blue-900">
-        <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-        <AlertTitle>Aviso de Persistência</AlertTitle>
-        <AlertDescription>
-          Como não há um banco de dados conectado no momento, as alterações são temporárias e
-          armazenadas no estado local. Elas serão perdidas ao recarregar a página até que um
-          provedor de banco de dados (Supabase ou Skip Cloud) seja integrado.
-        </AlertDescription>
-      </Alert>
 
       <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
         {sistemas.map((sistema) => (

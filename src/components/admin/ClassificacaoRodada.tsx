@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Calculator } from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
+import { supabase } from '@/lib/supabase/client'
 
 export default function ClassificacaoRodada({ rodada }: { rodada: Rodada }) {
   const { pontuacoes, atletas, grupos, grupoAtletas, finalizarRodada } = useAppStore()
@@ -40,7 +41,7 @@ export default function ClassificacaoRodada({ rodada }: { rodada: Rodada }) {
         pontos_presenca: p?.pontos_presenca || 0,
         pontos_podio: (p?.pontos_podio_principal || 0) + (p?.pontos_podio_consolacao || 0),
         pontos_manuais: p?.pontos_manuais || 0,
-        total: (p?.total || 0) + (p?.pontos_presenca || 0),
+        total: p?.total || 0,
         hasScore: !!p,
       }
     })
@@ -52,7 +53,9 @@ export default function ClassificacaoRodada({ rodada }: { rodada: Rodada }) {
 
   const handleRecalcular = async () => {
     await finalizarRodada(rodada.id)
+    await (supabase.rpc as any)('processar_presenca_rodada', { p_rodada_id: rodada.id })
     toast.success('Pontuação da rodada recalculada com sucesso!')
+    setTimeout(() => window.location.reload(), 1500)
   }
 
   return (
