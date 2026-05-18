@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 export default function Index() {
   const { publicacoes } = useAppStore()
@@ -57,6 +58,24 @@ export default function Index() {
 
   const selectedPub =
     latestPublicationsByLeague.find((p) => (p.liga_id || p.id) === selectedLigaId) || null
+
+  const [viewMode, setViewMode] = useState<'geral' | 'rodadas'>('geral')
+
+  const roundColumns = useMemo(() => {
+    if (!selectedPub || !selectedPub.ranking) return []
+    const keys = new Set<string>()
+    ;(selectedPub.ranking as any[]).forEach((r) => {
+      if (r.rodadas) {
+        Object.keys(r.rodadas).forEach((k) => keys.add(k))
+      }
+    })
+
+    return Array.from(keys).sort((a, b) => {
+      const numA = parseInt(a.replace(/\D/g, ''), 10) || 0
+      const numB = parseInt(b.replace(/\D/g, ''), 10) || 0
+      return numA - numB
+    })
+  }, [selectedPub])
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -165,6 +184,19 @@ export default function Index() {
                       minute: '2-digit',
                     })}
                   </p>
+
+                  <div className="flex justify-center mt-6">
+                    <Tabs
+                      value={viewMode}
+                      onValueChange={(v) => setViewMode(v as 'geral' | 'rodadas')}
+                      className="w-full max-w-sm"
+                    >
+                      <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="geral">Ranking Geral</TabsTrigger>
+                        <TabsTrigger value="rodadas">Por Rodada</TabsTrigger>
+                      </TabsList>
+                    </Tabs>
+                  </div>
                 </div>
                 <Card className="overflow-hidden border-border/50 shadow-md">
                   <div className="overflow-x-auto">
@@ -172,8 +204,14 @@ export default function Index() {
                       <TableHeader className="bg-muted/50">
                         <TableRow>
                           <TableHead className="w-20 text-center font-bold">Pos</TableHead>
-                          <TableHead className="font-bold">Atleta</TableHead>
+                          <TableHead className="font-bold min-w-[200px]">Atleta</TableHead>
                           <TableHead className="text-center font-bold">Categoria</TableHead>
+                          {viewMode === 'rodadas' &&
+                            roundColumns.map((col) => (
+                              <TableHead key={col} className="text-center font-bold">
+                                {col}
+                              </TableHead>
+                            ))}
                           <TableHead className="text-center font-bold text-primary">
                             Pontos
                           </TableHead>
@@ -223,6 +261,15 @@ export default function Index() {
                             <TableCell className="text-center text-muted-foreground font-medium">
                               {r.categoria}
                             </TableCell>
+                            {viewMode === 'rodadas' &&
+                              roundColumns.map((col) => (
+                                <TableCell
+                                  key={col}
+                                  className="text-center text-muted-foreground font-medium"
+                                >
+                                  {r.rodadas?.[col] ?? '-'}
+                                </TableCell>
+                              ))}
                             <TableCell className="text-center font-black text-primary text-xl">
                               {r.total}
                             </TableCell>
