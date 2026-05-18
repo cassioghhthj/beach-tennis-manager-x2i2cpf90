@@ -16,7 +16,12 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
-import { getWhatsappConfig, saveWhatsappConfig, sendWhatsappMessage } from '@/services/whatsapp'
+import {
+  getWhatsappConfig,
+  saveWhatsappConfig,
+  sendWhatsappMessage,
+  processarTemplateWhatsApp,
+} from '@/services/whatsapp'
 import { Loader2, MessageSquare, Save, Send } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 
@@ -40,7 +45,7 @@ const DEFAULT_TEMPLATE = `Olá {nome_atleta}! 🎾 Confira seu desempenho detalh
 🏆 TOTAL DA RODADA: {pontuacao} pontos.
 
 🔗 Acompanhe o Ranking Geral: 
-https://beach-tennis-manager-f5d86.goskip.app
+https://arenabeachrancking.site/
 
 {mensagem_otimista} Bora pra cima!`
 
@@ -67,23 +72,21 @@ export default function ConfiguracoesWhatsapp() {
     setTesting(true)
 
     let testMessage = form.getValues('mensagem_template') || ''
-    const dummyData: Record<string, string> = {
-      '{nome_atleta}': 'Atleta Teste',
-      '{rodada}': 'Rodada 1',
-      '{liga}': 'Liga Beach Tennis',
-      '{vitorias}': '3',
-      '{derrotas}': '1',
-      '{pontos_grupo}': '10',
-      '{pontos_vitorias}': '30',
-      '{bonus_5x0}': '5',
-      '{pontos_podio}': '20',
-      '{pontuacao}': '65',
-      '{mensagem_otimista}': 'Excelente desempenho!',
+    const dummyData: Record<string, string | number> = {
+      nome_atleta: 'Atleta Teste',
+      rodada: 'Rodada 1',
+      liga: 'Liga Beach Tennis',
+      vitorias: 3,
+      derrotas: 1,
+      pontos_grupo: 10,
+      pontos_vitorias: 30,
+      bonus_5x0: 5,
+      pontos_podio: 20,
+      pontuacao: 65,
+      mensagem_otimista: 'Excelente desempenho!',
     }
 
-    Object.keys(dummyData).forEach((key) => {
-      testMessage = testMessage.replace(new RegExp(key, 'g'), dummyData[key])
-    })
+    testMessage = processarTemplateWhatsApp(testMessage, dummyData)
 
     try {
       await sendWhatsappMessage(testPhone, testMessage)

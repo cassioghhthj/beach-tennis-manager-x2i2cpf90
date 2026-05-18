@@ -10,13 +10,21 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import useAppStore, { Rodada } from '@/stores/useAppStore'
 import { Button } from '@/components/ui/button'
-import { Calculator } from 'lucide-react'
+import { Calculator, Send } from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { supabase } from '@/lib/supabase/client'
+import { useState } from 'react'
+import {
+  getWhatsappConfig,
+  sendWhatsappMessage,
+  processarTemplateWhatsApp,
+} from '@/services/whatsapp'
 
 export default function ClassificacaoRodada({ rodada }: { rodada: Rodada }) {
-  const { pontuacoes, atletas, grupos, grupoAtletas, finalizarRodada } = useAppStore()
+  const { pontuacoes, atletas, grupos, grupoAtletas, finalizarRodada, partidas, ligas } =
+    useAppStore()
+  const [sendingWhatsapp, setSendingWhatsapp] = useState(false)
 
   const atletasDaRodada = useMemo(() => {
     const rGroups = grupos.filter((g) => g.rodada_id === rodada.id).map((g) => g.id)
@@ -58,6 +66,95 @@ export default function ClassificacaoRodada({ rodada }: { rodada: Rodada }) {
     setTimeout(() => window.location.reload(), 1500)
   }
 
+  const handleNotificarAtletas = async () => {
+    const confirm = window.confirm(
+      'Deseja enviar o resultado via WhatsApp para todos os atletas desta rodada com telefone cadastrado?',
+    )
+    if (!confirm) return
+
+    setSendingWhatsapp(true)
+    try {
+      const config = await getWhatsappConfig()
+      if (!config) {
+        toast.error('Configuração do WhatsApp não encontrada. Configure o WAHA primeiro.')
+        setSendingWhatsapp(false)
+        return
+      }
+
+      const liga = ligas?.find((l) => l.id === rodada.liga_id)
+      const nomeLiga = liga ? liga.nome : 'Liga Beach Tennis'
+      const nomeRodada = rodada.numero
+      const rGroups = grupos.filter((g) => g.rodada_id === rodada.id).map((g) => g.id)
+
+      let sentCount = 0
+      let errorCount = 0
+
+      for (const item of ranking) {
+        const telefone = item.atleta.telefone
+        if (!telefone) continue
+
+        const atletaPartidas = (partidas || []).filter(
+          (p) =>
+            p.grupo_id &&
+            rGroups.includes(p.grupo_id) &&
+            (p.atleta1_id === item.atleta.id ||
+              p.atleta2_id === item.atleta.id ||
+              p.atleta3_id === item.atleta.id ||
+              p.atleta4_id === item.atleta.id),
+        )
+
+        let vitorias = 0
+        let derrotas = 0
+
+        atletaPartidas.forEach((p) => {
+          const isTime1 = p.atleta1_id === item.atleta.id || p.atleta2_id === item.atleta.id
+          const isTime2 = p.atleta3_id === item.atleta.id || p.atleta4_id === item.atleta.id
+
+          if (isTime1) {
+            if (p.score1 > p.score2) vitorias++
+            else if (p.score1 < p.score2) derrotas++
+          } else if (isTime2) {
+            if (p.score2 > p.score1) vitorias++
+            else if (p.score2 < p.score1) derrotas++
+          }
+        })
+
+        const dados = {
+          nome_atleta: item.atleta.nome_completo,
+          rodada: nomeRodada,
+          liga: nomeLiga,
+          vitorias,
+          derrotas,
+          pontos_grupo: item.pontos_grupo,
+          pontos_vitorias: item.pontos_vitorias,
+          bonus_5x0: item.bonus_5x0,
+          pontos_podio: item.pontos_podio,
+          pontuacao: item.total,
+          mensagem_otimista:
+            item.total > 0
+              ? 'Excelente desempenho!'
+              : 'Bora treinar mais que na próxima você amassa!',
+        }
+
+        const mensagem = processarTemplateWhatsApp(config.mensagem_template, dados)
+
+        try {
+          await sendWhatsappMessage(telefone, mensagem)
+          sentCount++
+        } catch (err) {
+          console.error('Erro ao enviar para', item.atleta.nome_completo, err)
+          errorCount++
+        }
+      }
+
+      toast.success(`Notificações enviadas! Sucesso: ${sentCount}, Falhas: ${errorCount}`)
+    } catch (error: any) {
+      toast.error('Erro geral ao enviar WhatsApp', { description: error.message })
+    } finally {
+      setSendingWhatsapp(false)
+    }
+  }
+
   return (
     <Card>
       <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -67,10 +164,28 @@ export default function ClassificacaoRodada({ rodada }: { rodada: Rodada }) {
             Pontuação consolidada dos atletas nesta rodada.
           </p>
         </div>
-        <Button variant="outline" onClick={handleRecalcular}>
-          <Calculator className="mr-2 h-4 w-4" />
-          Recalcular Pontos
-        </Button>
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <Button variant="outline" onClick={handleRecalcular}>
+            <Calculator className="mr-2 h-4 w-4" />
+            Recalcular Pontos
+          </Button>
+          <Button
+            variant="default"
+            className="bg-green-600 hover:bg-green-700 text-white"
+            onClick={handleNotificarAtletas}
+            disabled={sendingWhatsapp || ranking.length === 0}
+          >
+            {sendingWhatsapp ? (
+              <span className="flex items-center">
+                <Send className="mr-2 h-4 w-4 animate-pulse" /> Enviando...
+              </span>
+            ) : (
+              <span className="flex items-center">
+                <Send className="mr-2 h-4 w-4" /> Notificar WhatsApp
+              </span>
+            )}
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {ranking.length === 0 ? (

@@ -47,6 +47,19 @@ export const saveWhatsappConfig = async (config: Partial<WhatsappConfig>) => {
   }
 }
 
+export const processarTemplateWhatsApp = (
+  template: string,
+  dados: Record<string, string | number>,
+) => {
+  let mensagem = template
+  Object.keys(dados).forEach((key) => {
+    const val = dados[key]
+    const safeValue = val !== null && val !== undefined ? String(val) : '0'
+    mensagem = mensagem.split(`{${key}}`).join(safeValue)
+  })
+  return mensagem
+}
+
 export const sendWhatsappMessage = async (phone: string, message: string) => {
   const { data, error } = await supabase.functions.invoke('send-whatsapp', {
     body: { phone, message },
