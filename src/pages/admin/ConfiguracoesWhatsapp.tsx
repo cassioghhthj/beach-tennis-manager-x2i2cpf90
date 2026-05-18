@@ -39,7 +39,6 @@ const DEFAULT_TEMPLATE = `Olá {nome_atleta}! 🎾 Confira seu desempenho detalh
 
 📊 Detalhamento de Pontos:
 • Presença na Rodada: {pontos_presenca}
-• Desempenho em Quadra (GP): {pontos_grupo}
 • Pontos por Vitórias: {pontos_vitorias}
 • Bônus Especial (5x0): {bonus_5x0}
 • Pódio/Premiação: {pontos_podio}

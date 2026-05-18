@@ -20,7 +20,12 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { CheckCircle2, Trophy, Calculator, Mail, Send, Smartphone, Loader2 } from 'lucide-react'
-import { getWhatsappConfig, sendWhatsappMessage, WhatsappConfig } from '@/services/whatsapp'
+import {
+  getWhatsappConfig,
+  sendWhatsappMessage,
+  processarTemplateWhatsApp,
+  WhatsappConfig,
+} from '@/services/whatsapp'
 import { useToast } from '@/hooks/use-toast'
 
 export default function Auditoria() {
@@ -74,13 +79,65 @@ export default function Auditoria() {
   }, [rodadaId, atletaId, grupos, grupoAtletas])
 
   const atletasComPontuacao = useMemo(() => {
+    const rGroups = grupos.filter((g) => g.rodada_id === rodadaId).map((g) => g.id)
+    const rodadaPartidas = partidas.filter((p) => rGroups.includes(p.grupo_id))
+
     return atletasDaRodada
       .map((a) => {
         const pt = pontuacoesRodada.find((p) => p.atleta_id === a.id)
-        return { ...a, pontuacao: pt }
+
+        let vitorias = 0
+        let derrotas = 0
+        rodadaPartidas.forEach((p) => {
+          const isTeam1 = p.atleta1_id === a.id || p.atleta2_id === a.id
+          const isTeam2 = p.atleta3_id === a.id || p.atleta4_id === a.id
+          if (isTeam1 || isTeam2) {
+            const scoreTeam = isTeam1 ? p.score1 : p.score2
+            const scoreOpp = isTeam1 ? p.score2 : p.score1
+            if (scoreTeam > scoreOpp) vitorias++
+            else if (scoreOpp > scoreTeam) derrotas++
+          }
+        })
+
+        return { ...a, pontuacao: pt, estatisticas: { vitorias, derrotas } }
       })
       .sort((a, b) => (b.pontuacao?.total || 0) - (a.pontuacao?.total || 0))
-  }, [atletasDaRodada, pontuacoesRodada])
+  }, [atletasDaRodada, pontuacoesRodada, grupos, rodadaId, partidas])
+
+  const gerarMensagemOtimista = (vitorias: number, derrotas: number, total: number) => {
+    if (vitorias > derrotas && vitorias > 0) return 'Excelente desempenho! Parabéns pelas vitórias.'
+    if (total > 0) return 'Belo esforço em quadra! Bora pra cima na próxima.'
+    return 'Não desanime, a próxima rodada é a sua chance de brilhar!'
+  }
+
+  const prepararMensagem = (atletaInfo: any) => {
+    const liga = ligas.find((l) => l.id === ligaId)
+    const rodada = rodadas.find((r) => r.id === rodadaId)
+
+    const dados = {
+      nome_atleta: atletaInfo.nome_completo,
+      rodada: rodada?.numero || '',
+      liga: liga?.nome || '',
+      vitorias: atletaInfo.estatisticas?.vitorias || 0,
+      derrotas: atletaInfo.estatisticas?.derrotas || 0,
+      pontos_presenca: atletaInfo.pontuacao?.pontos_presenca || 0,
+      pontos_grupo: atletaInfo.pontuacao?.pontos_grupo || 0,
+      pontos_grupos: atletaInfo.pontuacao?.pontos_grupo || 0, // Fallback para typo no template
+      pontos_vitorias: atletaInfo.pontuacao?.pontos_vitorias || 0,
+      bonus_5x0: atletaInfo.pontuacao?.bonus_5x0 || 0,
+      pontos_podio:
+        (atletaInfo.pontuacao?.pontos_podio_principal || 0) +
+        (atletaInfo.pontuacao?.pontos_podio_consolacao || 0),
+      pontuacao: atletaInfo.pontuacao?.total || 0,
+      mensagem_otimista: gerarMensagemOtimista(
+        atletaInfo.estatisticas?.vitorias || 0,
+        atletaInfo.estatisticas?.derrotas || 0,
+        atletaInfo.pontuacao?.total || 0,
+      ),
+    }
+
+    return processarTemplateWhatsApp(config?.mensagem_template || '', dados)
+  }
 
   const handleSendIndividual = async (targetAtletaId: string) => {
     if (!config?.api_url) {
@@ -96,13 +153,7 @@ export default function Auditoria() {
 
     setSendingMap((prev) => ({ ...prev, [targetAtletaId]: true }))
     try {
-      const liga = ligas.find((l) => l.id === ligaId)
-      const rodada = rodadas.find((r) => r.id === rodadaId)
-      let msg = config.mensagem_template || ''
-      msg = msg.replace(/\{nome_atleta\}/g, targetAtleta.nome_completo)
-      msg = msg.replace(/\{pontuacao\}/g, (targetAtleta.pontuacao?.total || 0).toString())
-      msg = msg.replace(/\{rodada\}/g, rodada?.numero || '')
-      msg = msg.replace(/\{liga\}/g, liga?.nome || '')
+      const msg = prepararMensagem(targetAtleta)
 
       await sendWhatsappMessage(targetAtleta.telefone, msg)
       toast({ title: 'Mensagem enviada!', description: `Para ${targetAtleta.nome_completo}` })
@@ -132,13 +183,7 @@ export default function Auditoria() {
     for (const a of validAtletas) {
       setSendingMap((prev) => ({ ...prev, [a.id]: true }))
       try {
-        const liga = ligas.find((l) => l.id === ligaId)
-        const rodada = rodadas.find((r) => r.id === rodadaId)
-        let msg = config.mensagem_template || ''
-        msg = msg.replace(/\{nome_atleta\}/g, a.nome_completo)
-        msg = msg.replace(/\{pontuacao\}/g, (a.pontuacao?.total || 0).toString())
-        msg = msg.replace(/\{rodada\}/g, rodada?.numero || '')
-        msg = msg.replace(/\{liga\}/g, liga?.nome || '')
+        const msg = prepararMensagem(a)
 
         await sendWhatsappMessage(a.telefone, msg)
         successCount++
