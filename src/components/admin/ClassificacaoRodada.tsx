@@ -86,7 +86,7 @@ export default function ClassificacaoRodada({ rodada }: { rodada: Rodada }) {
                   <TableHead>Atleta</TableHead>
                   <TableHead className="text-center">Pts Grupo</TableHead>
                   <TableHead className="text-center">Pts Vitórias</TableHead>
-                  <TableHead className="text-center">Bônus 5x0</TableHead>
+                  <TableHead className="text-center">Bônus (Zerado)</TableHead>
                   <TableHead className="text-center">Presença</TableHead>
                   <TableHead className="text-center">Pódios</TableHead>
                   <TableHead className="text-center">Manual</TableHead>

@@ -605,8 +605,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
       const v1 = p.score1 > p.score2
       const v2 = p.score2 > p.score1
-      const is5x0_1 = p.score1 === 5 && p.score2 === 0
-      const is5x0_2 = p.score2 === 5 && p.score1 === 0
+      const isMaxScore_1 = p.score1 > 0 && p.score2 === 0
+      const isMaxScore_2 = p.score2 > 0 && p.score1 === 0
 
       const updateStats = (
         st: { wins: number; saldo: number } | null,
@@ -629,27 +629,27 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         isWin: boolean,
         sW: number,
         sL: number,
-        is5x0: boolean,
+        isMaxScore: boolean,
       ) => {
         const a = initAtleta(aId || '')
         if (!a) return
         if (sis?.tipo === 'Geral') {
-          if (isWin) a.pontos_vitorias! += getRule('vitoria')
-          if (is5x0) a.bonus_5x0! += getRule('bonus_5x0')
+          if (isWin) a.pontos_vitorias! += getRule('vitoria') || 0
+          if (isMaxScore) a.bonus_5x0! += getRule('bonus_5x0') || 0
         } else {
           if (isWin) {
-            a.pontos_vitorias! += getRule(`vitoria_${sW}x${sL}`)
-            if (is5x0) a.bonus_5x0! += getRule('bonus_5x0')
+            a.pontos_vitorias! += getRule(`vitoria_${sW}x${sL}`) || 0
+            if (isMaxScore) a.bonus_5x0! += getRule('bonus_5x0') || 0
           } else {
-            a.pontos_vitorias! += getRule(`derrota_${sW}x${sL}`)
+            a.pontos_vitorias! += getRule(`derrota_${sW}x${sL}`) || 0
           }
         }
       }
 
-      applyPts(p.atleta1_id, v1, p.score1, p.score2, is5x0_1)
-      applyPts(p.atleta2_id, v1, p.score1, p.score2, is5x0_1)
-      applyPts(p.atleta3_id, v2, p.score2, p.score1, is5x0_2)
-      applyPts(p.atleta4_id, v2, p.score2, p.score1, is5x0_2)
+      applyPts(p.atleta1_id, v1, p.score1, p.score2, isMaxScore_1)
+      applyPts(p.atleta2_id, v1, p.score1, p.score2, isMaxScore_1)
+      applyPts(p.atleta3_id, v2, p.score2, p.score1, isMaxScore_2)
+      applyPts(p.atleta4_id, v2, p.score2, p.score1, isMaxScore_2)
     })
 
     if (sis?.tipo === 'Geral') {

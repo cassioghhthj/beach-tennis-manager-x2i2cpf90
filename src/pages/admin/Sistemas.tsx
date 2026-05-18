@@ -19,7 +19,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Star, Copy, Pencil } from 'lucide-react'
+import { Star, Copy, Pencil, Plus, Trash2 } from 'lucide-react'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import useAppStore, { SistemaPontuacao } from '@/stores/useAppStore'
 import { toast } from 'sonner'
 
@@ -77,6 +84,10 @@ export default function Sistemas() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [formData, setFormData] = useState<Record<string, any>>({})
   const [nomeSistema, setNomeSistema] = useState('')
+  const [tipoSistema, setTipoSistema] = useState<string>('Geral')
+  const [placares, setPlacares] = useState<
+    { id: string; w: number; l: number; ptsWin: number; ptsLose: number }[]
+  >([])
 
   const handleDuplicate = (id: string) => {
     const sis = sistemas.find((s) => s.id === id)
@@ -96,18 +107,48 @@ export default function Sistemas() {
 
   const handleEdit = (sistema: SistemaPontuacao) => {
     const sisRegras = regras.filter((r) => r.sistema_id === sistema.id)
+    const isNew = sisRegras.length === 0
     const defaults = sistema.tipo === 'Geral' ? defaultGeralKeys : defaultVitoriasKeys
 
     const data: Record<string, any> = {}
 
-    Object.entries(defaults).forEach(([k, v]) => {
-      data[k] = v
-    })
+    if (isNew) {
+      Object.entries(defaults).forEach(([k, v]) => {
+        data[k] = v
+      })
+    } else {
+      sisRegras.forEach((r) => {
+        data[r.chave] = r.valor_pontos
+      })
+    }
 
-    sisRegras.forEach((r) => {
-      data[r.chave] = r.valor_pontos
-    })
+    const extractedPlacares: {
+      id: string
+      w: number
+      l: number
+      ptsWin: number
+      ptsLose: number
+    }[] = []
 
+    if (sistema.tipo !== 'Geral') {
+      const keysToRemove: string[] = []
+      Object.keys(data).forEach((k) => {
+        const match = k.match(/^vitoria_(\d+)x(\d+)$/)
+        if (match) {
+          const w = Number(match[1])
+          const l = Number(match[2])
+          const ptsWin = data[k]
+          const ptsLose = data[`derrota_${l}x${w}`] || 0
+          extractedPlacares.push({ id: Math.random().toString(), w, l, ptsWin, ptsLose })
+          keysToRemove.push(k, `derrota_${l}x${w}`)
+        }
+      })
+      extractedPlacares.sort((a, b) => b.w - a.w || a.l - b.l)
+      keysToRemove.forEach((k) => delete data[k])
+    }
+
+    setPlacares(extractedPlacares)
+    setTipoSistema(sistema.tipo)
     setNomeSistema(sistema.nome)
     setFormData(data)
     setEditingId(sistema.id)
@@ -135,20 +176,37 @@ export default function Sistemas() {
   const handleSave = () => {
     if (!editingId) return
 
-    updateSistema(editingId, { nome: nomeSistema })
+    updateSistema(editingId, { nome: nomeSistema, tipo: tipoSistema as any })
 
     const novasRegras = Object.entries(formData).map(([chave, valor]) => ({
       chave,
       valor_pontos: Number(valor) || 0,
     }))
 
+    if (tipoSistema === 'Vitorias') {
+      placares.forEach((p) => {
+        novasRegras.push({ chave: `vitoria_${p.w}x${p.l}`, valor_pontos: p.ptsWin })
+        novasRegras.push({ chave: `derrota_${p.l}x${p.w}`, valor_pontos: p.ptsLose })
+      })
+    }
+
     updateRegrasSistema(editingId, novasRegras)
     toast.success('Sistema atualizado com sucesso!')
     setEditingId(null)
   }
 
+  const updatePlacar = (index: number, field: string, value: number) => {
+    const newPlacares = [...placares]
+    newPlacares[index] = { ...newPlacares[index], [field]: value }
+    setPlacares(newPlacares)
+  }
+
+  const removePlacar = (index: number) => {
+    setPlacares(placares.filter((_, i) => i !== index))
+  }
+
   const editingSistema = sistemas.find((s) => s.id === editingId)
-  const isGeral = editingSistema?.tipo === 'Geral'
+  const isGeral = tipoSistema === 'Geral'
 
   return (
     <div className="space-y-6">
@@ -237,13 +295,27 @@ export default function Sistemas() {
 
           <div className="flex-1 w-full overflow-y-auto" style={{ scrollbarGutter: 'stable' }}>
             <div className="space-y-6 py-4 px-6">
-              <div className="space-y-2">
-                <Label>Nome do Sistema</Label>
-                <Input
-                  value={nomeSistema}
-                  onChange={(e) => setNomeSistema(e.target.value)}
-                  placeholder="Nome do Sistema"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Nome do Sistema</Label>
+                  <Input
+                    value={nomeSistema}
+                    onChange={(e) => setNomeSistema(e.target.value)}
+                    placeholder="Nome do Sistema"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Tipo de Sistema</Label>
+                  <Select value={tipoSistema} onValueChange={setTipoSistema}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Geral">Geral (Por Posição no Grupo)</SelectItem>
+                      <SelectItem value="Vitorias">Vitórias (Por Placar Exato)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               {isGeral ? (
@@ -264,25 +336,83 @@ export default function Sistemas() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <h4 className="font-semibold border-b pb-2">Pontos por Placar (Vitórias)</h4>
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                    {[
-                      { k: 'vitoria_5x0', l: 'Vitória de 5x0' },
-                      { k: 'vitoria_4x1', l: 'Vitória de 4x1' },
-                      { k: 'vitoria_3x2', l: 'Vitória de 3x2' },
-                      { k: 'derrota_2x3', l: 'Derrota de 2x3' },
-                      { k: 'derrota_1x4', l: 'Derrota de 1x4' },
-                      { k: 'derrota_0x5', l: 'Derrota de 0x5' },
-                    ].map(({ k, l }) => (
-                      <div key={k} className="space-y-1">
-                        <Label className="text-xs">{l}</Label>
-                        <Input
-                          type="number"
-                          value={formData[k] ?? ''}
-                          onChange={(e) => handleChange(k, e.target.value)}
-                        />
+                  <div className="flex items-center justify-between border-b pb-2">
+                    <h4 className="font-semibold">Pontos por Placar (Vitórias e Derrotas)</h4>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setPlacares([
+                          ...placares,
+                          { id: Math.random().toString(), w: 0, l: 0, ptsWin: 0, ptsLose: 0 },
+                        ])
+                      }}
+                    >
+                      <Plus className="mr-2 h-4 w-4" /> Adicionar Placar
+                    </Button>
+                  </div>
+                  <div className="grid gap-3">
+                    {placares.map((placar, index) => (
+                      <div
+                        key={placar.id}
+                        className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-3 border rounded-md bg-muted/20"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            className="w-16 text-center font-bold"
+                            value={placar.w}
+                            onChange={(e) => updatePlacar(index, 'w', Number(e.target.value))}
+                            min={0}
+                          />
+                          <span className="font-bold text-muted-foreground">X</span>
+                          <Input
+                            type="number"
+                            className="w-16 text-center font-bold"
+                            value={placar.l}
+                            onChange={(e) => updatePlacar(index, 'l', Number(e.target.value))}
+                            min={0}
+                          />
+                        </div>
+                        <div className="flex-1 flex gap-4 w-full sm:w-auto">
+                          <div className="flex-1 space-y-1">
+                            <Label className="text-xs text-success">Pontos p/ Vencedor</Label>
+                            <Input
+                              type="number"
+                              value={placar.ptsWin}
+                              onChange={(e) =>
+                                updatePlacar(index, 'ptsWin', Number(e.target.value))
+                              }
+                            />
+                          </div>
+                          <div className="flex-1 space-y-1">
+                            <Label className="text-xs text-destructive">Pontos p/ Perdedor</Label>
+                            <Input
+                              type="number"
+                              value={placar.ptsLose}
+                              onChange={(e) =>
+                                updatePlacar(index, 'ptsLose', Number(e.target.value))
+                              }
+                            />
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive sm:mt-5 self-end sm:self-auto shrink-0"
+                          onClick={() => removePlacar(index)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     ))}
+                    {placares.length === 0 && (
+                      <div className="text-sm text-muted-foreground text-center py-6 border rounded-md border-dashed">
+                        Nenhum placar configurado. Adicione os resultados possíveis (ex: 7x0, 6x1).
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -323,7 +453,12 @@ export default function Sistemas() {
                 <h4 className="font-semibold border-b pb-2">Bônus Adicionais</h4>
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                   <div className="space-y-1">
-                    <Label className="text-xs">Pontos Bônus (5x0)</Label>
+                    <Label
+                      className="text-xs"
+                      title="Aplicado quando o adversário não faz pontos (Ex: 5x0, 7x0)"
+                    >
+                      Bônus Adv. Zerado
+                    </Label>
                     <Input
                       type="number"
                       value={formData['bonus_5x0'] ?? ''}
