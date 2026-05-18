@@ -150,6 +150,17 @@ export default function ClassificacaoRodada({ rodada }: { rodada: Rodada }) {
           )
         }
 
+        // Se o template ainda tem a palavra Desempenho em Quadra mas sem a variável correta, força uma limpeza
+        if (
+          safeTemplate.includes('Desempenho em Quadra') &&
+          !safeTemplate.includes('{pontos_grupo}')
+        ) {
+          safeTemplate = safeTemplate.replace(
+            'Desempenho em Quadra',
+            'Desempenho em Quadra (GP): {pontos_grupo}',
+          )
+        }
+
         const mensagem = processarTemplateWhatsApp(safeTemplate, dados)
 
         try {
@@ -213,7 +224,9 @@ export default function ClassificacaoRodada({ rodada }: { rodada: Rodada }) {
                 <TableRow>
                   <TableHead className="w-12 text-center">Pos</TableHead>
                   <TableHead>Atleta</TableHead>
-                  <TableHead className="text-center">Pts Grupo</TableHead>
+                  <TableHead className="text-center" title="Games Pró (Pontos Ganhos) no Grupo">
+                    GP / Pts Grupo
+                  </TableHead>
                   <TableHead className="text-center">Pts Vitórias</TableHead>
                   <TableHead className="text-center">Bônus (Zerado)</TableHead>
                   <TableHead className="text-center">Presença</TableHead>

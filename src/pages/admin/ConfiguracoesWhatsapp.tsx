@@ -39,6 +39,8 @@ const DEFAULT_TEMPLATE = `Olá {nome_atleta}! 🎾 Confira seu desempenho detalh
 
 📊 Detalhamento de Pontos:
 • Presença na Rodada: {pontos_presenca}
+• Desempenho em Quadra (GP): {pontos_grupo}
+• Pontos por Vitórias: {pontos_vitorias}
 • Bônus Especial (5x0): {bonus_5x0}
 • Pódio/Premiação: {pontos_podio}
 🏆 TOTAL DA RODADA: {pontuacao} pontos.
@@ -72,17 +74,17 @@ export default function ConfiguracoesWhatsapp() {
 
     let testMessage = form.getValues('mensagem_template') || ''
     const dummyData: Record<string, string | number> = {
-      nome_atleta: 'Atleta Teste',
-      rodada: 'Rodada 1',
+      nome_atleta: 'Milena Maciel',
+      rodada: 'Rodada 02',
       liga: 'Liga Beach Tennis',
-      vitorias: 3,
+      vitorias: 6,
       derrotas: 1,
       pontos_presenca: 10,
-      pontos_grupo: 0,
-      pontos_vitorias: 30,
-      bonus_5x0: 5,
+      pontos_grupo: 36,
+      pontos_vitorias: 60,
+      bonus_5x0: 0,
       pontos_podio: 20,
-      pontuacao: 65,
+      pontuacao: 126,
       mensagem_otimista: 'Excelente desempenho!',
     }
 
@@ -109,10 +111,14 @@ export default function ConfiguracoesWhatsapp() {
         const config = await getWhatsappConfig()
         if (config) {
           let msgTemplate = config.mensagem_template || DEFAULT_TEMPLATE
+
+          // Se for o template padrão antigo que não tem GP, atualiza para o novo
           if (
             msgTemplate ===
               'Olá {nome_atleta}, seu resultado da rodada saiu! Você conquistou {pontuacao} pontos.' ||
-            msgTemplate.includes('Desempenho em Quadra')
+            !msgTemplate.includes('{vitorias}') ||
+            (msgTemplate.includes('Desempenho em Quadra') &&
+              !msgTemplate.includes('{pontos_grupo}'))
           ) {
             msgTemplate = DEFAULT_TEMPLATE
           }
