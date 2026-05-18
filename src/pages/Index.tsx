@@ -174,6 +174,18 @@ export default function Index() {
                   >
                     {selectedPub.liga_nome} - {selectedPub.temporada}
                   </Badge>
+                  {selectedPub.ranking &&
+                    (selectedPub.ranking as any[]).length > 0 &&
+                    (selectedPub.ranking as any[])[0].categoria && (
+                      <div className="mt-3">
+                        <Badge
+                          variant="secondary"
+                          className="text-sm py-1 px-4 shadow-sm bg-primary/10 text-primary hover:bg-primary/20 border-primary/20"
+                        >
+                          {(selectedPub.ranking as any[])[0].categoria}
+                        </Badge>
+                      </div>
+                    )}
                   <p className="text-sm text-muted-foreground mt-3 font-medium">
                     Atualizado em{' '}
                     {new Date(selectedPub.data_publicacao).toLocaleDateString('pt-BR', {
@@ -203,16 +215,15 @@ export default function Index() {
                     <Table>
                       <TableHeader className="bg-muted/50">
                         <TableRow>
-                          <TableHead className="w-20 text-center font-bold">Pos</TableHead>
-                          <TableHead className="font-bold min-w-[200px]">Atleta</TableHead>
-                          <TableHead className="text-center font-bold">Categoria</TableHead>
+                          <TableHead className="w-16 text-center font-bold px-2">Pos</TableHead>
+                          <TableHead className="font-bold min-w-[150px] px-2">Atleta</TableHead>
                           {viewMode === 'rodadas' &&
                             roundColumns.map((col) => (
-                              <TableHead key={col} className="text-center font-bold">
+                              <TableHead key={col} className="text-center font-bold px-2">
                                 {col}
                               </TableHead>
                             ))}
-                          <TableHead className="text-center font-bold text-primary">
+                          <TableHead className="text-center font-bold text-primary px-2">
                             Pontos
                           </TableHead>
                         </TableRow>
@@ -223,7 +234,7 @@ export default function Index() {
                             key={r.atleta_id}
                             className="transition-colors hover:bg-muted/30"
                           >
-                            <TableCell className="text-center font-medium">
+                            <TableCell className="text-center font-medium px-2">
                               {idx === 0 ? (
                                 <Badge className="bg-yellow-500 hover:bg-yellow-600 px-2 py-0.5 text-sm shadow-sm">
                                   1º
@@ -249,28 +260,29 @@ export default function Index() {
                                 </span>
                               )}
                             </TableCell>
-                            <TableCell className="font-medium flex items-center gap-4">
-                              <Avatar className="h-12 w-12 border shadow-sm ring-2 ring-background">
-                                <AvatarImage src={r.avatar} className="object-cover" />
-                                <AvatarFallback className="bg-primary/10 text-primary font-bold">
-                                  {getInitials(r.nome)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="truncate text-base font-bold">{r.nome}</span>
-                            </TableCell>
-                            <TableCell className="text-center text-muted-foreground font-medium">
-                              {r.categoria}
+                            <TableCell className="font-medium px-2 py-3">
+                              <div className="flex items-center gap-3">
+                                <Avatar className="h-10 w-10 border shadow-sm ring-2 ring-background shrink-0">
+                                  <AvatarImage src={r.avatar} className="object-cover" />
+                                  <AvatarFallback className="bg-primary/10 text-primary font-bold">
+                                    {getInitials(r.nome)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="truncate text-sm sm:text-base font-bold">
+                                  {r.nome}
+                                </span>
+                              </div>
                             </TableCell>
                             {viewMode === 'rodadas' &&
                               roundColumns.map((col) => (
                                 <TableCell
                                   key={col}
-                                  className="text-center text-muted-foreground font-medium"
+                                  className="text-center text-muted-foreground font-medium px-2"
                                 >
                                   {r.rodadas?.[col] ?? '-'}
                                 </TableCell>
                               ))}
-                            <TableCell className="text-center font-black text-primary text-xl">
+                            <TableCell className="text-center font-black text-primary text-lg sm:text-xl px-2">
                               {r.total}
                             </TableCell>
                           </TableRow>
