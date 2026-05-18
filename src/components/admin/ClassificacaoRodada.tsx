@@ -51,6 +51,7 @@ export default function ClassificacaoRodada({ rodada }: { rodada: Rodada }) {
         pontos_manuais: p?.pontos_manuais || 0,
         total: p?.total || 0,
         hasScore: !!p,
+        raw_p: p,
       }
     })
 
@@ -105,26 +106,41 @@ export default function ClassificacaoRodada({ rodada }: { rodada: Rodada }) {
 
         let vitorias = 0
         let derrotas = 0
+        let games_pro = 0
+        let games_contra = 0
 
         atletaPartidas.forEach((p) => {
           const isTime1 = p.atleta1_id === item.atleta.id || p.atleta2_id === item.atleta.id
           const isTime2 = p.atleta3_id === item.atleta.id || p.atleta4_id === item.atleta.id
 
-          if (isTime1) {
-            if (p.score1 > p.score2) vitorias++
-            else if (p.score1 < p.score2) derrotas++
-          } else if (isTime2) {
-            if (p.score2 > p.score1) vitorias++
-            else if (p.score2 < p.score1) derrotas++
+          if (isTime1 || isTime2) {
+            const scoreTeam = isTime1 ? p.score1 : p.score2
+            const scoreOpp = isTime1 ? p.score2 : p.score1
+
+            if (scoreTeam > scoreOpp) vitorias++
+            else if (scoreTeam < scoreOpp) derrotas++
+
+            games_pro += scoreTeam
+            games_contra += scoreOpp
           }
         })
+
+        const pRaw = item.raw_p as any
+        const dbVitorias = pRaw?.vitorias ?? vitorias
+        const dbDerrotas = pRaw?.derrotas ?? derrotas
+        const dbGP = pRaw?.games_pro ?? games_pro
+        const dbGC = pRaw?.games_contra ?? games_contra
+        const dbSG = pRaw?.saldo_games ?? games_pro - games_contra
 
         const dados = {
           nome_atleta: item.atleta.nome_completo,
           rodada: nomeRodada,
           liga: nomeLiga,
-          vitorias,
-          derrotas,
+          vitorias: dbVitorias,
+          derrotas: dbDerrotas,
+          games_pro: dbGP,
+          games_contra: dbGC,
+          saldo_games: dbSG,
           pontos_presenca: item.pontos_presenca,
           pontos_grupo: item.pontos_grupo,
           pontos_vitorias: item.pontos_vitorias,
@@ -153,11 +169,12 @@ export default function ClassificacaoRodada({ rodada }: { rodada: Rodada }) {
         // Se o template ainda tem a palavra Desempenho em Quadra mas sem a variável correta, força uma limpeza
         if (
           safeTemplate.includes('Desempenho em Quadra') &&
-          !safeTemplate.includes('{pontos_grupo}')
+          !safeTemplate.includes('{pontos_grupo}') &&
+          !safeTemplate.includes('{games_pro}')
         ) {
           safeTemplate = safeTemplate.replace(
             'Desempenho em Quadra',
-            'Desempenho em Quadra (GP): {pontos_grupo}',
+            'Desempenho em Quadra (GP): {games_pro}',
           )
         }
 
@@ -224,8 +241,11 @@ export default function ClassificacaoRodada({ rodada }: { rodada: Rodada }) {
                 <TableRow>
                   <TableHead className="w-12 text-center">Pos</TableHead>
                   <TableHead>Atleta</TableHead>
-                  <TableHead className="text-center" title="Games Pró (Pontos Ganhos) no Grupo">
-                    GP / Pts Grupo
+                  <TableHead className="text-center" title="Games Pró Realizados">
+                    GP
+                  </TableHead>
+                  <TableHead className="text-center" title="Pontos do Grupo (Regra)">
+                    Pts Grupo
                   </TableHead>
                   <TableHead className="text-center">Pts Vitórias</TableHead>
                   <TableHead className="text-center">Bônus (Zerado)</TableHead>
@@ -246,6 +266,9 @@ export default function ClassificacaoRodada({ rodada }: { rodada: Rodada }) {
                           Sem cálculo
                         </Badge>
                       )}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {(item.raw_p as any)?.games_pro ?? 0}
                     </TableCell>
                     <TableCell className="text-center">{item.pontos_grupo}</TableCell>
                     <TableCell className="text-center">{item.pontos_vitorias}</TableCell>

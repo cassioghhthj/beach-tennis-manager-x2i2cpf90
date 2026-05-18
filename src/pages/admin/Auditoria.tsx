@@ -99,7 +99,25 @@ export default function Auditoria() {
           }
         })
 
-        return { ...a, pontuacao: pt, estatisticas: { vitorias, derrotas } }
+        let games_pro = 0
+        let games_contra = 0
+        rodadaPartidas.forEach((p) => {
+          const isTeam1 = p.atleta1_id === a.id || p.atleta2_id === a.id
+          const isTeam2 = p.atleta3_id === a.id || p.atleta4_id === a.id
+          if (isTeam1 || isTeam2) {
+            const scoreTeam = isTeam1 ? p.score1 : p.score2
+            const scoreOpp = isTeam1 ? p.score2 : p.score1
+            games_pro += scoreTeam
+            games_contra += scoreOpp
+          }
+        })
+        const saldo_games = games_pro - games_contra
+
+        return {
+          ...a,
+          pontuacao: pt,
+          estatisticas: { vitorias, derrotas, games_pro, games_contra, saldo_games },
+        }
       })
       .sort((a, b) => (b.pontuacao?.total || 0) - (a.pontuacao?.total || 0))
   }, [atletasDaRodada, pontuacoesRodada, grupos, rodadaId, partidas])
@@ -114,12 +132,22 @@ export default function Auditoria() {
     const liga = ligas.find((l) => l.id === ligaId)
     const rodada = rodadas.find((r) => r.id === rodadaId)
 
+    const ptRaw = atletaInfo.pontuacao as any
+    const dbVitorias = ptRaw?.vitorias ?? atletaInfo.estatisticas?.vitorias ?? 0
+    const dbDerrotas = ptRaw?.derrotas ?? atletaInfo.estatisticas?.derrotas ?? 0
+    const dbGP = ptRaw?.games_pro ?? atletaInfo.estatisticas?.games_pro ?? 0
+    const dbGC = ptRaw?.games_contra ?? atletaInfo.estatisticas?.games_contra ?? 0
+    const dbSG = ptRaw?.saldo_games ?? atletaInfo.estatisticas?.saldo_games ?? 0
+
     const dados = {
       nome_atleta: atletaInfo.nome_completo,
       rodada: rodada?.numero || '',
       liga: liga?.nome || '',
-      vitorias: atletaInfo.estatisticas?.vitorias || 0,
-      derrotas: atletaInfo.estatisticas?.derrotas || 0,
+      vitorias: dbVitorias,
+      derrotas: dbDerrotas,
+      games_pro: dbGP,
+      games_contra: dbGC,
+      saldo_games: dbSG,
       pontos_presenca: atletaInfo.pontuacao?.pontos_presenca || 0,
       pontos_grupo: atletaInfo.pontuacao?.pontos_grupo || 0,
       pontos_grupos: atletaInfo.pontuacao?.pontos_grupo || 0, // Fallback para typo no template
@@ -421,6 +449,31 @@ export default function Auditoria() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
+                <div className="grid grid-cols-3 gap-2 mb-4 bg-muted/30 p-3 rounded-md border text-center">
+                  <div>
+                    <div className="text-xs text-muted-foreground">V / D</div>
+                    <div className="font-semibold">
+                      {(pontuacao as any)?.vitorias ?? 0} / {(pontuacao as any)?.derrotas ?? 0}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">GP / GC</div>
+                    <div className="font-semibold">
+                      {(pontuacao as any)?.games_pro ?? 0} / {(pontuacao as any)?.games_contra ?? 0}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">Saldo</div>
+                    <div className="font-semibold text-primary">
+                      {(pontuacao as any)?.saldo_games ?? 0}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">Pontos por Grupo (GP/Regra):</span>
+                  <span className="font-medium">{pontuacao.pontos_grupo} pts</span>
+                </div>
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-muted-foreground">Pontos por Vitórias/Jogos:</span>
                   <span className="font-medium">{pontuacao.pontos_vitorias} pts</span>
