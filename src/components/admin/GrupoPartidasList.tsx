@@ -9,7 +9,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Trash2, Save } from 'lucide-react'
+import { Trash2, Save, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 
 export default function GrupoPartidasList({
   grupo,
@@ -27,6 +28,7 @@ export default function GrupoPartidasList({
   const [s2, setS2] = useState('')
   const [a3, setA3] = useState('')
   const [a4, setA4] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
 
   const grupoAtletasList = useMemo(() => {
     const ids = grupoAtletas
@@ -40,28 +42,40 @@ export default function GrupoPartidasList({
     [partidas, grupo.id],
   )
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!a1 || !a2 || !a3 || !a4 || !s1 || !s2) return
     const ids = [a1, a2, a3, a4]
     if (new Set(ids).size !== 4) {
-      alert('Selecione 4 atletas diferentes.')
+      toast.error('Selecione 4 atletas diferentes.')
       return
     }
-    addPartida({
-      grupo_id: grupo.id,
-      atleta1_id: a1,
-      atleta2_id: a2,
-      score1: parseInt(s1),
-      atleta3_id: a3,
-      atleta4_id: a4,
-      score2: parseInt(s2),
-    })
-    setA1('')
-    setA2('')
-    setA3('')
-    setA4('')
-    setS1('')
-    setS2('')
+    try {
+      setIsSaving(true)
+      const res = (await addPartida({
+        grupo_id: grupo.id,
+        atleta1_id: a1,
+        atleta2_id: a2,
+        score1: parseInt(s1, 10),
+        atleta3_id: a3,
+        atleta4_id: a4,
+        score2: parseInt(s2, 10),
+      })) as any
+
+      if (res?.error) throw res.error
+
+      toast.success('Partida salva com sucesso!')
+      setA1('')
+      setA2('')
+      setA3('')
+      setA4('')
+      setS1('')
+      setS2('')
+    } catch (error: any) {
+      console.error(error)
+      toast.error(error.message || 'Erro ao salvar partida. Tente novamente.')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const getAtletaName = (id: string) => {
@@ -128,19 +142,28 @@ export default function GrupoPartidasList({
               className="h-[104px] w-[104px] shrink-0 hidden md:flex flex-col gap-2 rounded-xl shadow-md transition-all hover:scale-105"
               onClick={handleAdd}
               title="Salvar Partida"
-              disabled={!a1 || !a2 || !a3 || !a4 || !s1 || !s2}
+              disabled={!a1 || !a2 || !a3 || !a4 || !s1 || !s2 || isSaving}
             >
-              <Save className="h-6 w-6" />
-              <span>Salvar</span>
+              {isSaving ? (
+                <Loader2 className="h-6 w-6 animate-spin" />
+              ) : (
+                <Save className="h-6 w-6" />
+              )}
+              <span>{isSaving ? 'Salvando...' : 'Salvar'}</span>
             </Button>
           </div>
           <Button
             size="lg"
             className="w-full md:hidden rounded-xl shadow-md"
             onClick={handleAdd}
-            disabled={!a1 || !a2 || !a3 || !a4 || !s1 || !s2}
+            disabled={!a1 || !a2 || !a3 || !a4 || !s1 || !s2 || isSaving}
           >
-            <Save className="mr-2 h-5 w-5" /> Salvar Partida
+            {isSaving ? (
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+            ) : (
+              <Save className="mr-2 h-5 w-5" />
+            )}
+            {isSaving ? 'Salvando...' : 'Salvar Partida'}
           </Button>
         </div>
       )}

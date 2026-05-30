@@ -353,6 +353,9 @@ export type Database = {
         Row: {
           atleta_id: string | null
           bonus_5x0: number
+          derrotas: number
+          games_contra: number
+          games_pro: number
           id: string
           observacao_manuais: string | null
           pontos_grupo: number
@@ -362,11 +365,16 @@ export type Database = {
           pontos_presenca: number
           pontos_vitorias: number
           rodada_id: string | null
+          saldo_games: number
           total: number
+          vitorias: number
         }
         Insert: {
           atleta_id?: string | null
           bonus_5x0?: number
+          derrotas?: number
+          games_contra?: number
+          games_pro?: number
           id?: string
           observacao_manuais?: string | null
           pontos_grupo?: number
@@ -376,11 +384,16 @@ export type Database = {
           pontos_presenca?: number
           pontos_vitorias?: number
           rodada_id?: string | null
+          saldo_games?: number
           total?: number
+          vitorias?: number
         }
         Update: {
           atleta_id?: string | null
           bonus_5x0?: number
+          derrotas?: number
+          games_contra?: number
+          games_pro?: number
           id?: string
           observacao_manuais?: string | null
           pontos_grupo?: number
@@ -390,7 +403,9 @@ export type Database = {
           pontos_presenca?: number
           pontos_vitorias?: number
           rodada_id?: string | null
+          saldo_games?: number
           total?: number
+          vitorias?: number
         }
         Relationships: [
           {
@@ -780,6 +795,11 @@ export const Constants = {
 //   pontos_manuais: integer (not null, default: 0)
 //   observacao_manuais: text (nullable)
 //   pontos_presenca: integer (not null, default: 0)
+//   vitorias: integer (not null, default: 0)
+//   derrotas: integer (not null, default: 0)
+//   games_pro: integer (not null, default: 0)
+//   games_contra: integer (not null, default: 0)
+//   saldo_games: integer (not null, default: 0)
 // Table: publicacoes
 //   id: uuid (not null, default: gen_random_uuid())
 //   user_id: uuid (nullable, default: auth.uid())
@@ -956,6 +976,11 @@ export const Constants = {
 //     v_pontos_presenca integer := 0;
 //     v_atleta record;
 //     v_new_id uuid;
+//     v_vitorias integer;
+//     v_derrotas integer;
+//     v_games_pro integer;
+//     v_games_contra integer;
+//     v_saldo_games integer;
 //   BEGIN
 //     -- Obter o sistema e o snapshot da rodada
 //     SELECT sistema_id, snapshot_regras INTO v_sistema_id, v_snapshot
@@ -1015,25 +1040,48 @@ export const Constants = {
 //       WHERE g.rodada_id = p_rodada_id AND ga.atleta_id IS NOT NULL
 //     ) LOOP
 //
+//       -- Calcular estatísticas de partidas para o atleta nesta rodada
+//       SELECT
+//         COALESCE(SUM(CASE WHEN is_team1 AND score1 > score2 THEN 1 WHEN NOT is_team1 AND score2 > score1 THEN 1 ELSE 0 END), 0),
+//         COALESCE(SUM(CASE WHEN is_team1 AND score1 < score2 THEN 1 WHEN NOT is_team1 AND score2 < score1 THEN 1 ELSE 0 END), 0),
+//         COALESCE(SUM(CASE WHEN is_team1 THEN score1 ELSE score2 END), 0),
+//         COALESCE(SUM(CASE WHEN is_team1 THEN score2 ELSE score1 END), 0)
+//       INTO v_vitorias, v_derrotas, v_games_pro, v_games_contra
+//       FROM (
+//         SELECT p.score1, p.score2,
+//                (p.atleta1_id = v_atleta.atleta_id OR p.atleta2_id = v_atleta.atleta_id) as is_team1
+//         FROM public.partidas p
+//         JOIN public.grupos g ON p.grupo_id = g.id
+//         WHERE g.rodada_id = p_rodada_id
+//           AND (p.atleta1_id = v_atleta.atleta_id OR p.atleta2_id = v_atleta.atleta_id OR p.atleta3_id = v_atleta.atleta_id OR p.atleta4_id = v_atleta.atleta_id)
+//       ) as stats;
+//
+//       v_saldo_games := v_games_pro - v_games_contra;
+//
 //       -- Verifica se já existe pontuação para o atleta nesta rodada
 //       IF EXISTS (SELECT 1 FROM public.pontuacoes_rodada WHERE rodada_id = p_rodada_id AND atleta_id = v_atleta.atleta_id) THEN
-//         -- Atualiza apenas os pontos de presença e refaz o somatório total garantindo que nulos sejam 0
+//         -- Atualiza os pontos de presença, novas estatísticas, e refaz o somatório total garantindo que nulos sejam 0
 //         UPDATE public.pontuacoes_rodada
 //         SET
 //           pontos_presenca = v_pontos_presenca,
+//           vitorias = v_vitorias,
+//           derrotas = v_derrotas,
+//           games_pro = v_games_pro,
+//           games_contra = v_games_contra,
+//           saldo_games = v_saldo_games,
 //           total = COALESCE(pontos_grupo, 0) + COALESCE(pontos_vitorias, 0) + COALESCE(bonus_5x0, 0) + COALESCE(pontos_podio_principal, 0) + COALESCE(pontos_podio_consolacao, 0) + COALESCE(pontos_manuais, 0) + v_pontos_presenca
 //         WHERE rodada_id = p_rodada_id AND atleta_id = v_atleta.atleta_id;
 //       ELSE
-//         -- Insere o atleta garantindo os pontos de presença, já que ele participou mas não teve jogos pontuados
+//         -- Insere o atleta garantindo os pontos de presença e as novas estatísticas
 //         v_new_id := gen_random_uuid();
 //         INSERT INTO public.pontuacoes_rodada (
 //           id, rodada_id, atleta_id, pontos_grupo, pontos_vitorias, bonus_5x0,
 //           pontos_podio_principal, pontos_podio_consolacao, pontos_manuais,
-//           pontos_presenca, total
+//           pontos_presenca, total, vitorias, derrotas, games_pro, games_contra, saldo_games
 //         ) VALUES (
 //           v_new_id, p_rodada_id, v_atleta.atleta_id, 0, 0, 0,
 //           0, 0, 0,
-//           v_pontos_presenca, v_pontos_presenca
+//           v_pontos_presenca, v_pontos_presenca, v_vitorias, v_derrotas, v_games_pro, v_games_contra, v_saldo_games
 //         );
 //       END IF;
 //

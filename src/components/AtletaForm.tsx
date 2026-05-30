@@ -39,12 +39,19 @@ const formSchema = z.object({
 
 interface AtletaFormProps {
   initialData?: any
-  onSubmit: (data: z.infer<typeof formSchema>) => void
+  onSubmit: (data: z.infer<typeof formSchema>) => Promise<void> | void
   onCancel: () => void
   ligas: Liga[]
+  isLoading?: boolean
 }
 
-export function AtletaForm({ initialData, onSubmit, onCancel, ligas }: AtletaFormProps) {
+export function AtletaForm({
+  initialData,
+  onSubmit,
+  onCancel,
+  ligas,
+  isLoading = false,
+}: AtletaFormProps) {
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -270,10 +277,23 @@ export function AtletaForm({ initialData, onSubmit, onCancel, ligas }: AtletaFor
         />
 
         <div className="flex justify-end gap-2 pt-4">
-          <Button type="button" variant="outline" onClick={onCancel}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+            disabled={isLoading || isUploading}
+          >
             Cancelar
           </Button>
-          <Button type="submit">Salvar Atleta</Button>
+          <Button type="submit" disabled={isLoading || isUploading}>
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando...
+              </>
+            ) : (
+              'Salvar Atleta'
+            )}
+          </Button>
         </div>
       </form>
     </Form>

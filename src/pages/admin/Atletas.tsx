@@ -24,6 +24,7 @@ export default function Atletas() {
   const [search, setSearch] = useState('')
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingAtleta, setEditingAtleta] = useState<any>(null)
+  const [isSaving, setIsSaving] = useState(false)
 
   const filteredAtletas = atletas.filter(
     (a) =>
@@ -42,16 +43,29 @@ export default function Atletas() {
     setIsFormOpen(true)
   }
 
-  const handleSubmit = (data: any) => {
-    const { ligas_ids, ...atletaData } = data
-    if (editingAtleta) {
-      updateAtleta(editingAtleta.id, atletaData, ligas_ids)
-      toast.success('Atleta atualizado com sucesso!')
-    } else {
-      addAtleta(atletaData, ligas_ids)
-      toast.success('Atleta cadastrado com sucesso!')
+  const handleSubmit = async (data: any) => {
+    try {
+      setIsSaving(true)
+      const { ligas_ids, ...atletaData } = data
+
+      if (editingAtleta) {
+        const res = (await updateAtleta(editingAtleta.id, atletaData, ligas_ids)) as any
+        if (res?.error) throw res.error
+        toast.success('Atleta atualizado com sucesso!')
+      } else {
+        const res = (await addAtleta(atletaData, ligas_ids)) as any
+        if (res?.error) throw res.error
+        toast.success('Atleta cadastrado com sucesso!')
+      }
+      setIsFormOpen(false)
+    } catch (error: any) {
+      console.error(error)
+      toast.error(
+        error.message || 'Erro ao salvar atleta. Verifique sua conexão e tente novamente.',
+      )
+    } finally {
+      setIsSaving(false)
     }
-    setIsFormOpen(false)
   }
 
   return (
@@ -154,6 +168,7 @@ export default function Atletas() {
             onSubmit={handleSubmit}
             onCancel={() => setIsFormOpen(false)}
             ligas={ligas}
+            isLoading={isSaving}
           />
         </SheetContent>
       </Sheet>
