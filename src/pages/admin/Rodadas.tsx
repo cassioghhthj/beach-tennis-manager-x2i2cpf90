@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, Eye, Calendar, MapPin, Clock } from 'lucide-react'
+import { Plus, Eye, Calendar, MapPin, Clock, Loader2 } from 'lucide-react'
 import useAppStore from '@/stores/useAppStore'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -61,20 +62,32 @@ export default function Rodadas() {
     sistema_id: '',
     observacoes: '',
   })
+  const [isSaving, setIsSaving] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    addRodada({ ...formData, status: 'Draft' })
-    setOpen(false)
-    setFormData({
-      liga_id: '',
-      numero: 'R1',
-      data: '',
-      hora: '',
-      local: '',
-      sistema_id: '',
-      observacoes: '',
-    })
+    try {
+      setIsSaving(true)
+      const res = (await addRodada({ ...formData, status: 'Draft' })) as any
+      if (res?.error) throw res.error
+
+      toast.success('Rodada criada com sucesso!')
+      setOpen(false)
+      setFormData({
+        liga_id: '',
+        numero: 'R1',
+        data: '',
+        hora: '',
+        local: '',
+        sistema_id: '',
+        observacoes: '',
+      })
+    } catch (error: any) {
+      console.error(error)
+      toast.error(error.message || 'Erro ao criar rodada. Tente novamente.')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   return (
@@ -182,11 +195,25 @@ export default function Rodadas() {
                 />
               </div>
               <div className="flex justify-end space-x-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setOpen(false)}
+                  disabled={isSaving}
+                >
                   Cancelar
                 </Button>
-                <Button type="submit">Salvar Rodada</Button>
-              </div>
+                <Button type="submit" disabled={isSaving}>
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    'Salvar Rodada'
+                  )}
+                </Button>
+              </div>{' '}
             </form>
           </DialogContent>
         </Dialog>

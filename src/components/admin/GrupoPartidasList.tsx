@@ -29,6 +29,7 @@ export default function GrupoPartidasList({
   const [a3, setA3] = useState('')
   const [a4, setA4] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const [isDeleting, setIsDeleting] = useState<string | null>(null)
 
   const grupoAtletasList = useMemo(() => {
     const ids = grupoAtletas
@@ -75,6 +76,20 @@ export default function GrupoPartidasList({
       toast.error(error.message || 'Erro ao salvar partida. Tente novamente.')
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  const handleDelete = async (partidaId: string) => {
+    try {
+      setIsDeleting(partidaId)
+      const res = (await deletePartida(partidaId)) as any
+      if (res?.error) throw res.error
+      toast.success('Partida removida com sucesso.')
+    } catch (error: any) {
+      console.error(error)
+      toast.error(error.message || 'Erro ao remover partida.')
+    } finally {
+      setIsDeleting(null)
     }
   }
 
@@ -197,11 +212,20 @@ export default function GrupoPartidasList({
                   variant="outline"
                   size="sm"
                   className="w-full sm:w-auto text-destructive hover:bg-destructive/10 hover:border-destructive/30 hover:text-destructive"
-                  onClick={() => deletePartida(p.id)}
+                  onClick={() => handleDelete(p.id)}
+                  disabled={isDeleting === p.id}
                 >
-                  <Trash2 className="h-4 w-4 sm:mr-2" />
-                  <span className="sm:hidden ml-2">Excluir</span>
-                  <span className="hidden sm:inline">Excluir</span>
+                  {isDeleting === p.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin sm:mr-2" />
+                  ) : (
+                    <Trash2 className="h-4 w-4 sm:mr-2" />
+                  )}
+                  <span className="sm:hidden ml-2">
+                    {isDeleting === p.id ? 'Excluindo' : 'Excluir'}
+                  </span>
+                  <span className="hidden sm:inline">
+                    {isDeleting === p.id ? 'Excluindo...' : 'Excluir'}
+                  </span>
                 </Button>
               </div>
             )}

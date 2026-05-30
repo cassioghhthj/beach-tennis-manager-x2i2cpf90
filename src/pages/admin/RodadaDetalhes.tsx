@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import useAppStore from '@/stores/useAppStore'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { ArrowLeft, Plus, Calculator } from 'lucide-react'
+import { ArrowLeft, Plus, Calculator, Loader2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import GrupoCard from '@/components/admin/GrupoCard'
 import PodioConfig from '@/components/admin/PodioConfig'
@@ -46,15 +46,63 @@ export default function RodadaDetalhes() {
   const [transitionDirection, setTransitionDirection] = useState<'forward' | 'backward' | null>(
     null,
   )
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
+  const [isAddingGroup, setIsAddingGroup] = useState(false)
+  const [isRecalculating, setIsRecalculating] = useState(false)
 
   const rodada = useMemo(() => rodadas.find((r) => r.id === id), [rodadas, id])
   const rodadaGrupos = useMemo(() => grupos.filter((g) => g.rodada_id === id), [grupos, id])
 
   if (!rodada) return <div className="p-8 text-center">Rodada não encontrada</div>
 
-  const handleAddGroup = () => {
-    const nextChar = String.fromCharCode(65 + rodadaGrupos.length)
-    addGrupo({ rodada_id: rodada.id, nome: `Grupo ${nextChar}`, finalizado: false })
+  const handleAddGroup = async () => {
+    try {
+      setIsAddingGroup(true)
+      const nextChar = String.fromCharCode(65 + rodadaGrupos.length)
+      const res = (await addGrupo({
+        rodada_id: rodada.id,
+        nome: `Grupo ${nextChar}`,
+        finalizado: false,
+      })) as any
+      if (res?.error) throw res.error
+      toast({
+        title: 'Sucesso',
+        description: `Grupo ${nextChar} criado com sucesso.`,
+      })
+    } catch (error: any) {
+      console.error(error)
+      toast({
+        variant: 'destructive',
+        title: 'Erro',
+        description: error.message || 'Erro ao criar grupo. Tente novamente.',
+      })
+    } finally {
+      setIsAddingGroup(false)
+    }
+  }
+
+  const handleRecalculate = async () => {
+    if (!rodada) return
+    try {
+      setIsRecalculating(true)
+      const res = (await finalizarRodada(rodada.id)) as any
+      if (res?.error) throw res.error
+      await (supabase.rpc as any)('processar_presenca_rodada', { p_rodada_id: rodada.id })
+      toast({
+        title: 'Sucesso',
+        description: 'Pontuação recalculada com sucesso.',
+      })
+      setTimeout(() => window.location.reload(), 1000)
+    } catch (error: any) {
+      console.error(error)
+      toast({
+        variant: 'destructive',
+        title: 'Erro',
+        description: error.message || 'Erro ao recalcular pontuação.',
+      })
+    } finally {
+      setIsRecalculating(false)
+    }
   }
 
   const nextStatusMap: Record<string, any> = {
@@ -97,27 +145,41 @@ export default function RodadaDetalhes() {
       return
     }
 
-    if (isForward && nextStatus === 'Round Finalized') {
-      await finalizarRodada(rodada.id)
-      await (supabase.rpc as any)('processar_presenca_rodada', { p_rodada_id: rodada.id })
+    try {
+      setIsUpdatingStatus(true)
+      if (isForward && nextStatus === 'Round Finalized') {
+        const res = (await finalizarRodada(rodada.id)) as any
+        if (res?.error) throw res.error
+        await (supabase.rpc as any)('processar_presenca_rodada', { p_rodada_id: rodada.id })
+
+        toast({
+          title: 'Status atualizado',
+          description: `O status da rodada foi alterado e a pontuação calculada.`,
+        })
+        setTimeout(() => window.location.reload(), 1500)
+        return
+      } else {
+        const res = (await updateRodada(rodada.id, { status: nextStatus })) as any
+        if (res?.error) throw res.error
+      }
 
       toast({
         title: 'Status atualizado',
-        description: `O status da rodada foi alterado e a pontuação calculada.`,
+        description: `O status da rodada foi alterado para ${statusTranslations[nextStatus] || nextStatus}.`,
       })
-      setTimeout(() => window.location.reload(), 1500)
-      return
-    } else {
-      updateRodada(rodada.id, { status: nextStatus })
+
+      setConfirmDialogOpen(false)
+      setTransitionDirection(null)
+    } catch (error: any) {
+      console.error(error)
+      toast({
+        variant: 'destructive',
+        title: 'Erro',
+        description: error.message || 'Erro ao atualizar status. Tente novamente.',
+      })
+    } finally {
+      setIsUpdatingStatus(false)
     }
-
-    toast({
-      title: 'Status atualizado',
-      description: `O status da rodada foi alterado para ${statusTranslations[nextStatus] || nextStatus}.`,
-    })
-
-    setConfirmDialogOpen(false)
-    setTransitionDirection(null)
   }
 
   const previewNextStatus =
@@ -149,8 +211,13 @@ export default function RodadaDetalhes() {
             </Button>
           )}
           {rodada.status === 'Round Finalized' && (
-            <Button variant="outline" onClick={() => finalizarRodada(rodada.id)}>
-              <Calculator className="mr-2 h-4 w-4" /> Recalcular Pontuação
+            <Button variant="outline" onClick={handleRecalculate} disabled={isRecalculating}>
+              {isRecalculating ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Calculator className="mr-2 h-4 w-4" />
+              )}
+              {isRecalculating ? 'Recalculando...' : 'Recalcular Pontuação'}
             </Button>
           )}
           {rodada.status !== 'Published' && (
@@ -170,10 +237,22 @@ export default function RodadaDetalhes() {
           <div className="flex justify-end">
             <Button
               onClick={handleAddGroup}
-              disabled={rodada.status === 'Round Finalized' || rodada.status === 'Published'}
+              disabled={
+                rodada.status === 'Round Finalized' ||
+                rodada.status === 'Published' ||
+                isAddingGroup
+              }
               variant="secondary"
             >
-              <Plus className="mr-2 h-4 w-4" /> Novo Grupo
+              {isAddingGroup ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Criando...
+                </>
+              ) : (
+                <>
+                  <Plus className="mr-2 h-4 w-4" /> Novo Grupo
+                </>
+              )}
             </Button>
           </div>
           <div className="grid gap-6">
@@ -190,7 +269,9 @@ export default function RodadaDetalhes() {
                     <h3 className="font-semibold text-lg text-foreground">Nenhum grupo criado</h3>
                     <p>Crie o primeiro grupo para começar a adicionar atletas e partidas.</p>
                   </div>
-                  <Button onClick={handleAddGroup}>Criar Grupo A</Button>
+                  <Button onClick={handleAddGroup} disabled={isAddingGroup}>
+                    {isAddingGroup ? 'Criando...' : 'Criar Grupo A'}
+                  </Button>
                 </CardContent>
               </Card>
             )}
@@ -224,10 +305,16 @@ export default function RodadaDetalhes() {
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end gap-2 mt-4">
-            <Button variant="outline" onClick={() => setConfirmDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setConfirmDialogOpen(false)}
+              disabled={isUpdatingStatus}
+            >
               Cancelar
             </Button>
-            <Button onClick={confirmStatusChange}>Confirmar</Button>
+            <Button onClick={confirmStatusChange} disabled={isUpdatingStatus}>
+              {isUpdatingStatus ? 'Salvando...' : 'Confirmar'}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
