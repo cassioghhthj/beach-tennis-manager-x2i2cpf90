@@ -39,7 +39,7 @@ const getStatusColor = (status: string) => {
 export default function RodadaDetalhes() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { rodadas, grupos, addGrupo, updateRodada, finalizarRodada } = useAppStore()
+  const { rodadas, grupos, addGrupo, updateRodada, finalizarRodada, partidas } = useAppStore()
   const { toast } = useToast()
 
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
@@ -85,14 +85,55 @@ export default function RodadaDetalhes() {
     if (!rodada) return
     try {
       setIsRecalculating(true)
+
+      const { data: bkp } = await supabase
+        .from('pontuacoes_rodada')
+        .select(
+          'atleta_id, pontos_manuais, observacao_manuais, pontos_podio_principal, pontos_podio_consolacao',
+        )
+        .eq('rodada_id', rodada.id)
+
       const res = (await finalizarRodada(rodada.id)) as any
       if (res?.error) throw res.error
       await (supabase.rpc as any)('processar_presenca_rodada', { p_rodada_id: rodada.id })
+
+      if (bkp && bkp.length > 0) {
+        for (const b of bkp) {
+          if (
+            b.pontos_manuais !== 0 ||
+            b.pontos_podio_principal !== 0 ||
+            b.pontos_podio_consolacao !== 0 ||
+            b.observacao_manuais
+          ) {
+            await supabase
+              .from('pontuacoes_rodada')
+              .update({
+                pontos_manuais: b.pontos_manuais,
+                observacao_manuais: b.observacao_manuais,
+                pontos_podio_principal: b.pontos_podio_principal,
+                pontos_podio_consolacao: b.pontos_podio_consolacao,
+              })
+              .eq('rodada_id', rodada.id)
+              .eq('atleta_id', b.atleta_id)
+          }
+        }
+      }
+
+      const { data: fresh } = await supabase
+        .from('pontuacoes_rodada')
+        .select('*')
+        .eq('rodada_id', rodada.id)
+      if (fresh && (useAppStore as any).setState) {
+        ;(useAppStore as any).setState((state: any) => ({
+          pontuacoes: [...state.pontuacoes.filter((p: any) => p.rodada_id !== rodada.id), ...fresh],
+        }))
+      }
+
       toast({
         title: 'Sucesso',
         description: 'Pontuação recalculada com sucesso.',
       })
-      setTimeout(() => window.location.reload(), 1000)
+      window.dispatchEvent(new Event('refresh-classificacao'))
     } catch (error: any) {
       console.error(error)
       toast({
@@ -147,29 +188,79 @@ export default function RodadaDetalhes() {
 
     try {
       setIsUpdatingStatus(true)
+
+      if (isForward) {
+        await (supabase.rpc as any)('processar_presenca_rodada', { p_rodada_id: rodada.id })
+      }
+
       if (isForward && nextStatus === 'Round Finalized') {
+        const { data: bkp } = await supabase
+          .from('pontuacoes_rodada')
+          .select(
+            'atleta_id, pontos_manuais, observacao_manuais, pontos_podio_principal, pontos_podio_consolacao',
+          )
+          .eq('rodada_id', rodada.id)
+
         const res = (await finalizarRodada(rodada.id)) as any
         if (res?.error) throw res.error
+
         await (supabase.rpc as any)('processar_presenca_rodada', { p_rodada_id: rodada.id })
+
+        if (bkp && bkp.length > 0) {
+          for (const b of bkp) {
+            if (
+              b.pontos_manuais !== 0 ||
+              b.pontos_podio_principal !== 0 ||
+              b.pontos_podio_consolacao !== 0 ||
+              b.observacao_manuais
+            ) {
+              await supabase
+                .from('pontuacoes_rodada')
+                .update({
+                  pontos_manuais: b.pontos_manuais,
+                  observacao_manuais: b.observacao_manuais,
+                  pontos_podio_principal: b.pontos_podio_principal,
+                  pontos_podio_consolacao: b.pontos_podio_consolacao,
+                })
+                .eq('rodada_id', rodada.id)
+                .eq('atleta_id', b.atleta_id)
+            }
+          }
+        }
+
+        const updateRes = (await updateRodada(rodada.id, { status: nextStatus })) as any
+        if (updateRes?.error) throw updateRes.error
+
+        const { data: fresh } = await supabase
+          .from('pontuacoes_rodada')
+          .select('*')
+          .eq('rodada_id', rodada.id)
+        if (fresh && (useAppStore as any).setState) {
+          ;(useAppStore as any).setState((state: any) => ({
+            pontuacoes: [
+              ...state.pontuacoes.filter((p: any) => p.rodada_id !== rodada.id),
+              ...fresh,
+            ],
+          }))
+        }
 
         toast({
           title: 'Status atualizado',
           description: `O status da rodada foi alterado e a pontuação calculada.`,
         })
-        setTimeout(() => window.location.reload(), 1500)
-        return
       } else {
         const res = (await updateRodada(rodada.id, { status: nextStatus })) as any
         if (res?.error) throw res.error
-      }
 
-      toast({
-        title: 'Status atualizado',
-        description: `O status da rodada foi alterado para ${statusTranslations[nextStatus] || nextStatus}.`,
-      })
+        toast({
+          title: 'Status atualizado',
+          description: `O status da rodada foi alterado para ${statusTranslations[nextStatus] || nextStatus}.`,
+        })
+      }
 
       setConfirmDialogOpen(false)
       setTransitionDirection(null)
+      window.dispatchEvent(new Event('refresh-classificacao'))
     } catch (error: any) {
       console.error(error)
       toast({
@@ -184,6 +275,11 @@ export default function RodadaDetalhes() {
 
   const previewNextStatus =
     transitionDirection === 'forward' ? nextStatusMap[rodada.status] : prevStatusMap[rodada.status]
+
+  const rodadaGruposIds = rodadaGrupos.map((g) => g.id)
+  const rodadaPartidas =
+    partidas?.filter((p) => p.grupo_id && rodadaGruposIds.includes(p.grupo_id)) || []
+  const hasNoMatches = rodadaPartidas.length === 0
 
   return (
     <div className="space-y-6">
@@ -291,17 +387,29 @@ export default function RodadaDetalhes() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Confirmar Mudança de Status</DialogTitle>
-            <DialogDescription>
-              Deseja realmente {transitionDirection === 'forward' ? 'avançar' : 'voltar'} o status
-              de{' '}
-              <strong className="text-foreground">
-                {statusTranslations[rodada.status] || rodada.status}
-              </strong>{' '}
-              para{' '}
-              <strong className="text-foreground">
-                {statusTranslations[previewNextStatus] || previewNextStatus}
-              </strong>
-              ?
+            <DialogDescription asChild>
+              <div className="space-y-4 mt-2">
+                {transitionDirection === 'forward' &&
+                previewNextStatus === 'Round Finalized' &&
+                hasNoMatches ? (
+                  <div className="p-3 bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 border border-yellow-500/20 rounded-md font-medium text-sm">
+                    Atenção: Esta rodada não possui partidas registradas. Deseja finalizar
+                    utilizando apenas os pontos manuais e de pódio?
+                  </div>
+                ) : null}
+                <p>
+                  Deseja realmente {transitionDirection === 'forward' ? 'avançar' : 'voltar'} o
+                  status de{' '}
+                  <strong className="text-foreground">
+                    {statusTranslations[rodada.status] || rodada.status}
+                  </strong>{' '}
+                  para{' '}
+                  <strong className="text-foreground">
+                    {statusTranslations[previewNextStatus] || previewNextStatus}
+                  </strong>
+                  ?
+                </p>
+              </div>
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end gap-2 mt-4">

@@ -3,8 +3,9 @@ import useAppStore, { Grupo, Rodada } from '@/stores/useAppStore'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Lock, Unlock, Trash2 } from 'lucide-react'
+import { Lock, Unlock, Trash2, Loader2 } from 'lucide-react'
 import GrupoAtletasList from './GrupoAtletasList'
+import PontosManuaisDialog from './PontosManuaisDialog'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,18 +21,49 @@ import GrupoPartidasList from './GrupoPartidasList'
 import GrupoClassificacao from './GrupoClassificacao'
 
 export default function GrupoCard({ grupo, rodada }: { grupo: Grupo; rodada: Rodada }) {
-  const { updateGrupo, deleteGrupo } = useAppStore()
+  const { updateGrupo, deleteGrupo, partidas } = useAppStore()
 
   const isRoundLocked = rodada.status === 'Round Finalized' || rodada.status === 'Published'
   const isFinalizado = grupo.finalizado || isRoundLocked
 
-  const handleFinalize = () => {
-    updateGrupo(grupo.id, { finalizado: true })
+  const [isFinalizing, setIsFinalizing] = useState(false)
+  const [showNoMatchAlert, setShowNoMatchAlert] = useState(false)
+  const [isReopening, setIsReopening] = useState(false)
+
+  const grupoPartidas = partidas.filter((p) => p.grupo_id === grupo.id)
+
+  const finalizeGroup = async () => {
+    setIsFinalizing(true)
+    try {
+      const res = (await updateGrupo(grupo.id, { finalizado: true })) as any
+      if (res?.error) throw res.error
+    } catch (error: any) {
+      console.error(error)
+    } finally {
+      setIsFinalizing(false)
+      setShowNoMatchAlert(false)
+    }
   }
 
-  const handleReopen = () => {
+  const handleFinalize = () => {
+    if (grupoPartidas.length === 0) {
+      setShowNoMatchAlert(true)
+    } else {
+      finalizeGroup()
+    }
+  }
+
+  const handleReopen = async () => {
     if (confirm('Tem certeza que deseja reabrir o grupo? Os resultados finais podem mudar.')) {
-      updateGrupo(grupo.id, { finalizado: false })
+      setIsReopening(true)
+      try {
+        const res = (await updateGrupo(grupo.id, { finalizado: false })) as any
+        if (res?.error) throw res.error
+      } catch (error: any) {
+        console.error(error)
+      } finally {
+        setIsReopening(false)
+      }
     }
   }
 
@@ -46,36 +78,39 @@ export default function GrupoCard({ grupo, rodada }: { grupo: Grupo; rodada: Rod
         </div>
         <div className="flex items-center gap-2">
           {!grupo.finalizado && (
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                  disabled={isRoundLocked}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Excluir Grupo</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Deseja realmente excluir o grupo? Esta ação é permanente e todos os dados
-                    vinculados a este grupo serão perdidos.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={() => deleteGrupo(grupo.id)}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            <>
+              <PontosManuaisDialog grupo={grupo} rodada={rodada} isFinalizado={isFinalizado} />
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    disabled={isRoundLocked || isFinalizing}
                   >
-                    Confirmar
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Excluir Grupo</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Deseja realmente excluir o grupo? Esta ação é permanente e todos os dados
+                      vinculados a este grupo serão perdidos.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => deleteGrupo(grupo.id)}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Confirmar
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </>
           )}
           {!grupo.finalizado ? (
             <Button
@@ -83,17 +118,50 @@ export default function GrupoCard({ grupo, rodada }: { grupo: Grupo; rodada: Rod
               size="sm"
               onClick={handleFinalize}
               className="bg-green-600 text-white hover:bg-green-700"
-              disabled={isRoundLocked}
+              disabled={isRoundLocked || isFinalizing}
             >
-              <Lock className="mr-2 h-4 w-4" /> Finalizar Grupo
+              {isFinalizing ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Lock className="mr-2 h-4 w-4" />
+              )}
+              {isFinalizing ? 'Finalizando...' : 'Finalizar Grupo'}
             </Button>
           ) : (
-            <Button variant="outline" size="sm" onClick={handleReopen} disabled={isRoundLocked}>
-              <Unlock className="mr-2 h-4 w-4" /> Reabrir Grupo
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleReopen}
+              disabled={isRoundLocked || isReopening}
+            >
+              {isReopening ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Unlock className="mr-2 h-4 w-4" />
+              )}
+              {isReopening ? 'Reabrindo...' : 'Reabrir Grupo'}
             </Button>
           )}
         </div>
       </CardHeader>
+
+      <AlertDialog open={showNoMatchAlert} onOpenChange={setShowNoMatchAlert}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Atenção</AlertDialogTitle>
+            <AlertDialogDescription>
+              Este grupo possui apenas pontos manuais e não possui resultados de jogos registrados.
+              Deseja finalizar mesmo assim?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isFinalizing}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={finalizeGroup} disabled={isFinalizing}>
+              {isFinalizing ? 'Finalizando...' : 'Confirmar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <CardContent className="p-0">
         <div className="grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x border-b">
           <div className="p-4">

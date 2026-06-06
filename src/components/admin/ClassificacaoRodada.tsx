@@ -14,7 +14,7 @@ import { Calculator, Send } from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { supabase } from '@/lib/supabase/client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   getWhatsappConfig,
   sendWhatsappMessage,
@@ -22,22 +22,62 @@ import {
 } from '@/services/whatsapp'
 
 export default function ClassificacaoRodada({ rodada }: { rodada: Rodada }) {
-  const { pontuacoes, atletas, grupos, grupoAtletas, finalizarRodada, partidas, ligas } =
-    useAppStore()
+  const {
+    pontuacoes: storePontuacoes,
+    atletas,
+    grupos,
+    grupoAtletas,
+    finalizarRodada,
+    partidas,
+    ligas,
+  } = useAppStore()
   const [sendingWhatsapp, setSendingWhatsapp] = useState(false)
+  const [localPontuacoes, setLocalPontuacoes] = useState(storePontuacoes)
+
+  useEffect(() => {
+    setLocalPontuacoes(storePontuacoes)
+  }, [storePontuacoes])
+
+  useEffect(() => {
+    const refreshPontuacoes = async () => {
+      const { data } = await supabase
+        .from('pontuacoes_rodada')
+        .select('*')
+        .eq('rodada_id', rodada.id)
+      if (data) {
+        setLocalPontuacoes((prev) => {
+          const others = prev.filter((p) => p.rodada_id !== rodada.id)
+          return [...others, ...data]
+        })
+      }
+    }
+
+    refreshPontuacoes()
+
+    const handleRefresh = () => {
+      refreshPontuacoes()
+    }
+
+    window.addEventListener('refresh-classificacao', handleRefresh)
+    return () => window.removeEventListener('refresh-classificacao', handleRefresh)
+  }, [rodada.id])
 
   const atletasDaRodada = useMemo(() => {
     const rGroups = grupos.filter((g) => g.rodada_id === rodada.id).map((g) => g.id)
     const gAtletas = grupoAtletas
       .filter((ga) => rGroups.includes(ga.grupo_id))
       .map((ga) => ga.atleta_id)
-    return Array.from(new Set(gAtletas))
+    const pAtletas = localPontuacoes
+      .filter((p) => p.rodada_id === rodada.id)
+      .map((p) => p.atleta_id)
+
+    return Array.from(new Set([...gAtletas, ...pAtletas]))
       .map((id) => atletas.find((a) => a.id === id))
       .filter(Boolean) as typeof atletas
-  }, [rodada.id, grupos, grupoAtletas, atletas])
+  }, [rodada.id, grupos, grupoAtletas, atletas, localPontuacoes])
 
   const ranking = useMemo(() => {
-    const rPontuacoes = pontuacoes.filter((p) => p.rodada_id === rodada.id)
+    const rPontuacoes = localPontuacoes.filter((p) => p.rodada_id === rodada.id)
 
     const combined = atletasDaRodada.map((atleta) => {
       const p = rPontuacoes.find((pt) => pt.atleta_id === atleta.id)
@@ -58,13 +98,53 @@ export default function ClassificacaoRodada({ rodada }: { rodada: Rodada }) {
     return combined.sort(
       (a, b) => b.total - a.total || a.atleta.nome_completo.localeCompare(b.atleta.nome_completo),
     )
-  }, [pontuacoes, atletasDaRodada, rodada.id])
+  }, [atletasDaRodada, rodada.id])
 
   const handleRecalcular = async () => {
+    const { data: bkp } = await supabase
+      .from('pontuacoes_rodada')
+      .select(
+        'atleta_id, pontos_manuais, observacao_manuais, pontos_podio_principal, pontos_podio_consolacao',
+      )
+      .eq('rodada_id', rodada.id)
+
     await finalizarRodada(rodada.id)
     await (supabase.rpc as any)('processar_presenca_rodada', { p_rodada_id: rodada.id })
+
+    if (bkp && bkp.length > 0) {
+      for (const b of bkp) {
+        if (
+          b.pontos_manuais !== 0 ||
+          b.pontos_podio_principal !== 0 ||
+          b.pontos_podio_consolacao !== 0 ||
+          b.observacao_manuais
+        ) {
+          await supabase
+            .from('pontuacoes_rodada')
+            .update({
+              pontos_manuais: b.pontos_manuais,
+              observacao_manuais: b.observacao_manuais,
+              pontos_podio_principal: b.pontos_podio_principal,
+              pontos_podio_consolacao: b.pontos_podio_consolacao,
+            })
+            .eq('rodada_id', rodada.id)
+            .eq('atleta_id', b.atleta_id)
+        }
+      }
+    }
+
+    const { data: fresh } = await supabase
+      .from('pontuacoes_rodada')
+      .select('*')
+      .eq('rodada_id', rodada.id)
+    if (fresh && (useAppStore as any).setState) {
+      ;(useAppStore as any).setState((state: any) => ({
+        pontuacoes: [...state.pontuacoes.filter((p: any) => p.rodada_id !== rodada.id), ...fresh],
+      }))
+    }
+
     toast.success('Pontuação da rodada recalculada com sucesso!')
-    setTimeout(() => window.location.reload(), 1500)
+    window.dispatchEvent(new Event('refresh-classificacao'))
   }
 
   const handleNotificarAtletas = async () => {

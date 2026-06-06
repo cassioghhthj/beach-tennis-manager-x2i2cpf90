@@ -80,9 +80,15 @@ export default function PodioConfig({ rodada }: { rodada: Rodada }) {
   const getDraft = (tipo: string, pos: number) =>
     drafts.find((d) => d.tipo === tipo && d.posicao === pos)
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const valid = drafts.filter((d) => d.atleta1_id && (!isDuplas || d.atleta2_id)) as Podio[]
-    salvarPodiosRodada(
+
+    const { data: bkp } = await supabase
+      .from('pontuacoes_rodada')
+      .select('atleta_id, pontos_manuais, observacao_manuais')
+      .eq('rodada_id', rodada.id)
+
+    await salvarPodiosRodada(
       rodada.id,
       valid.map((v) => {
         const { id, ...rest } = v
@@ -92,7 +98,35 @@ export default function PodioConfig({ rodada }: { rodada: Rodada }) {
         return isUUID ? v : (rest as any)
       }),
     )
+    await (supabase.rpc as any)('processar_presenca_rodada', { p_rodada_id: rodada.id })
+
+    if (bkp && bkp.length > 0) {
+      for (const b of bkp) {
+        if (b.pontos_manuais !== 0 || b.observacao_manuais) {
+          await supabase
+            .from('pontuacoes_rodada')
+            .update({
+              pontos_manuais: b.pontos_manuais,
+              observacao_manuais: b.observacao_manuais,
+            })
+            .eq('rodada_id', rodada.id)
+            .eq('atleta_id', b.atleta_id)
+        }
+      }
+    }
+
+    const { data: fresh } = await supabase
+      .from('pontuacoes_rodada')
+      .select('*')
+      .eq('rodada_id', rodada.id)
+    if (fresh && (useAppStore as any).setState) {
+      ;(useAppStore as any).setState((state: any) => ({
+        pontuacoes: [...state.pontuacoes.filter((p: any) => p.rodada_id !== rodada.id), ...fresh],
+      }))
+    }
+
     toast.success('Pódios salvos com sucesso!')
+    window.dispatchEvent(new Event('refresh-classificacao'))
   }
 
   const handleAddAjuste = async () => {
@@ -118,43 +152,36 @@ export default function PodioConfig({ rodada }: { rodada: Rodada }) {
           .eq('id', existing.id)
 
         if (error) throw error
-
-        ;(useAppStore as any).setState((state: any) => ({
-          pontuacoes: state.pontuacoes.map((p: any) =>
-            p.id === existing.id
-              ? {
-                  ...p,
-                  pontos_manuais: pts,
-                  observacao_manuais: ajusteObs,
-                  total: p.total - p.pontos_manuais + pts,
-                }
-              : p,
-          ),
-        }))
       } else {
-        const { data, error } = await supabase
-          .from('pontuacoes_rodada')
-          .insert({
-            rodada_id: rodada.id,
-            atleta_id: ajusteAtleta,
-            pontos_manuais: pts,
-            observacao_manuais: ajusteObs,
-            total: pts,
-          })
-          .select()
-          .single()
+        const { error } = await supabase.from('pontuacoes_rodada').insert({
+          rodada_id: rodada.id,
+          atleta_id: ajusteAtleta,
+          pontos_manuais: pts,
+          observacao_manuais: ajusteObs,
+          pontos_presenca: 0,
+          total: pts,
+        })
 
         if (error) throw error
-        if (data) {
-          ;(useAppStore as any).setState((state: any) => ({
-            pontuacoes: [...state.pontuacoes, data],
-          }))
-        }
       }
+
+      await (supabase.rpc as any)('processar_presenca_rodada', { p_rodada_id: rodada.id })
+
+      const { data: fresh } = await supabase
+        .from('pontuacoes_rodada')
+        .select('*')
+        .eq('rodada_id', rodada.id)
+      if (fresh && (useAppStore as any).setState) {
+        ;(useAppStore as any).setState((state: any) => ({
+          pontuacoes: [...state.pontuacoes.filter((p: any) => p.rodada_id !== rodada.id), ...fresh],
+        }))
+      }
+
       toast.success('Ajuste manual salvo!')
       setAjusteAtleta('')
       setAjustePontos('')
       setAjusteObs('')
+      window.dispatchEvent(new Event('refresh-classificacao'))
     } catch (error) {
       console.error(error)
       toast.error('Erro ao salvar ajuste manual.')
@@ -178,19 +205,23 @@ export default function PodioConfig({ rodada }: { rodada: Rodada }) {
 
         if (error) throw error
 
-        ;(useAppStore as any).setState((state: any) => ({
-          pontuacoes: state.pontuacoes.map((p: any) =>
-            p.id === existing.id
-              ? {
-                  ...p,
-                  pontos_manuais: 0,
-                  observacao_manuais: null,
-                  total: p.total - p.pontos_manuais,
-                }
-              : p,
-          ),
-        }))
+        await (supabase.rpc as any)('processar_presenca_rodada', { p_rodada_id: rodada.id })
+
+        const { data: fresh } = await supabase
+          .from('pontuacoes_rodada')
+          .select('*')
+          .eq('rodada_id', rodada.id)
+        if (fresh && (useAppStore as any).setState) {
+          ;(useAppStore as any).setState((state: any) => ({
+            pontuacoes: [
+              ...state.pontuacoes.filter((p: any) => p.rodada_id !== rodada.id),
+              ...fresh,
+            ],
+          }))
+        }
+
         toast.success('Ajuste removido!')
+        window.dispatchEvent(new Event('refresh-classificacao'))
       } catch (error) {
         toast.error('Erro ao remover ajuste.')
       } finally {

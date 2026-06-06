@@ -27,9 +27,10 @@ import {
   WhatsappConfig,
 } from '@/services/whatsapp'
 import { useToast } from '@/hooks/use-toast'
+import { supabase } from '@/lib/supabase/client'
 
 export default function Auditoria() {
-  const { ligas, rodadas, atletas, pontuacoes, partidas, grupos, grupoAtletas } = useAppStore()
+  const { ligas, rodadas, atletas, partidas, grupos, grupoAtletas } = useAppStore()
 
   const [ligaId, setLigaId] = useState<string>('')
   const [rodadaId, setRodadaId] = useState<string>('')
@@ -40,25 +41,69 @@ export default function Auditoria() {
   const [sendingAll, setSendingAll] = useState(false)
   const { toast } = useToast()
 
+  const [pontuacoesDb, setPontuacoesDb] = useState<any[]>([])
+  const [isLoadingData, setIsLoadingData] = useState(false)
+
   useEffect(() => {
     getWhatsappConfig().then(setConfig)
   }, [])
 
+  useEffect(() => {
+    if (!rodadaId) {
+      setPontuacoesDb([])
+      return
+    }
+
+    const fetchPontuacoes = async () => {
+      setIsLoadingData(true)
+      try {
+        const { data, error } = await supabase
+          .from('pontuacoes_rodada')
+          .select(`
+            *,
+            atleta:atletas(*)
+          `)
+          .eq('rodada_id', rodadaId)
+
+        if (data && !error) {
+          setPontuacoesDb(data)
+        }
+      } catch (err) {
+        console.error('Erro ao buscar pontuações:', err)
+      } finally {
+        setIsLoadingData(false)
+      }
+    }
+
+    fetchPontuacoes()
+  }, [rodadaId])
+
   const rodadasLiga = useMemo(() => rodadas.filter((r) => r.liga_id === ligaId), [rodadas, ligaId])
-  const pontuacoesRodada = useMemo(
-    () => pontuacoes.filter((p) => p.rodada_id === rodadaId),
-    [pontuacoes, rodadaId],
-  )
+
+  const atletasComPontuacao = useMemo(() => {
+    return pontuacoesDb
+      .map((p) => ({
+        id: p.atleta_id,
+        nome_completo: p.atleta?.nome_completo || 'Atleta Desconhecido',
+        telefone: p.atleta?.telefone,
+        pontuacao: p,
+      }))
+      .sort((a, b) => (b.pontuacao?.total || 0) - (a.pontuacao?.total || 0))
+  }, [pontuacoesDb])
+
   const atletasDaRodada = useMemo(() => {
-    const ids = pontuacoesRodada.map((p) => p.atleta_id)
-    return atletas.filter((a) => ids.includes(a.id))
-  }, [pontuacoesRodada, atletas])
+    return atletasComPontuacao.map((a) => a.pontuacao?.atleta).filter(Boolean)
+  }, [atletasComPontuacao])
 
   const pontuacao = useMemo(
-    () => pontuacoesRodada.find((p) => p.atleta_id === atletaId),
-    [pontuacoesRodada, atletaId],
+    () => pontuacoesDb.find((p) => p.atleta_id === atletaId),
+    [pontuacoesDb, atletaId],
   )
-  const atleta = useMemo(() => atletas.find((a) => a.id === atletaId), [atletas, atletaId])
+
+  const atleta = useMemo(
+    () => pontuacoesDb.find((p) => p.atleta_id === atletaId)?.atleta,
+    [pontuacoesDb, atletaId],
+  )
 
   const historicoPartidas = useMemo(() => {
     if (!rodadaId || !atletaId) return []
@@ -78,50 +123,6 @@ export default function Auditoria() {
     )
   }, [rodadaId, atletaId, grupos, grupoAtletas])
 
-  const atletasComPontuacao = useMemo(() => {
-    const rGroups = grupos.filter((g) => g.rodada_id === rodadaId).map((g) => g.id)
-    const rodadaPartidas = partidas.filter((p) => rGroups.includes(p.grupo_id))
-
-    return atletasDaRodada
-      .map((a) => {
-        const pt = pontuacoesRodada.find((p) => p.atleta_id === a.id)
-
-        let vitorias = 0
-        let derrotas = 0
-        rodadaPartidas.forEach((p) => {
-          const isTeam1 = p.atleta1_id === a.id || p.atleta2_id === a.id
-          const isTeam2 = p.atleta3_id === a.id || p.atleta4_id === a.id
-          if (isTeam1 || isTeam2) {
-            const scoreTeam = isTeam1 ? p.score1 : p.score2
-            const scoreOpp = isTeam1 ? p.score2 : p.score1
-            if (scoreTeam > scoreOpp) vitorias++
-            else if (scoreOpp > scoreTeam) derrotas++
-          }
-        })
-
-        let games_pro = 0
-        let games_contra = 0
-        rodadaPartidas.forEach((p) => {
-          const isTeam1 = p.atleta1_id === a.id || p.atleta2_id === a.id
-          const isTeam2 = p.atleta3_id === a.id || p.atleta4_id === a.id
-          if (isTeam1 || isTeam2) {
-            const scoreTeam = isTeam1 ? p.score1 : p.score2
-            const scoreOpp = isTeam1 ? p.score2 : p.score1
-            games_pro += scoreTeam
-            games_contra += scoreOpp
-          }
-        })
-        const saldo_games = games_pro - games_contra
-
-        return {
-          ...a,
-          pontuacao: pt,
-          estatisticas: { vitorias, derrotas, games_pro, games_contra, saldo_games },
-        }
-      })
-      .sort((a, b) => (b.pontuacao?.total || 0) - (a.pontuacao?.total || 0))
-  }, [atletasDaRodada, pontuacoesRodada, grupos, rodadaId, partidas])
-
   const gerarMensagemOtimista = (vitorias: number, derrotas: number, total: number) => {
     if (vitorias > derrotas && vitorias > 0) return 'Excelente desempenho! Parabéns pelas vitórias.'
     if (total > 0) return 'Belo esforço em quadra! Bora pra cima na próxima.'
@@ -133,11 +134,12 @@ export default function Auditoria() {
     const rodada = rodadas.find((r) => r.id === rodadaId)
 
     const ptRaw = atletaInfo.pontuacao as any
-    const dbVitorias = ptRaw?.vitorias ?? atletaInfo.estatisticas?.vitorias ?? 0
-    const dbDerrotas = ptRaw?.derrotas ?? atletaInfo.estatisticas?.derrotas ?? 0
-    const dbGP = ptRaw?.games_pro ?? atletaInfo.estatisticas?.games_pro ?? 0
-    const dbGC = ptRaw?.games_contra ?? atletaInfo.estatisticas?.games_contra ?? 0
-    const dbSG = ptRaw?.saldo_games ?? atletaInfo.estatisticas?.saldo_games ?? 0
+    const dbVitorias = ptRaw?.vitorias ?? 0
+    const dbDerrotas = ptRaw?.derrotas ?? 0
+    const dbGP = ptRaw?.games_pro ?? 0
+    const dbGC = ptRaw?.games_contra ?? 0
+    const dbSG = ptRaw?.saldo_games ?? 0
+    const dbPM = ptRaw?.pontos_manuais ?? 0
 
     const dados = {
       nome_atleta: atletaInfo.nome_completo,
@@ -148,20 +150,15 @@ export default function Auditoria() {
       games_pro: dbGP,
       games_contra: dbGC,
       saldo_games: dbSG,
-      pontos_presenca: atletaInfo.pontuacao?.pontos_presenca || 0,
-      pontos_grupo: atletaInfo.pontuacao?.pontos_grupo || 0,
-      pontos_grupos: atletaInfo.pontuacao?.pontos_grupo || 0, // Fallback para typo no template
-      pontos_vitorias: atletaInfo.pontuacao?.pontos_vitorias || 0,
-      bonus_5x0: atletaInfo.pontuacao?.bonus_5x0 || 0,
-      pontos_podio:
-        (atletaInfo.pontuacao?.pontos_podio_principal || 0) +
-        (atletaInfo.pontuacao?.pontos_podio_consolacao || 0),
-      pontuacao: atletaInfo.pontuacao?.total || 0,
-      mensagem_otimista: gerarMensagemOtimista(
-        atletaInfo.estatisticas?.vitorias || 0,
-        atletaInfo.estatisticas?.derrotas || 0,
-        atletaInfo.pontuacao?.total || 0,
-      ),
+      pontos_presenca: ptRaw?.pontos_presenca || 0,
+      pontos_grupo: ptRaw?.pontos_grupo || 0,
+      pontos_grupos: ptRaw?.pontos_grupo || 0, // Fallback para typo no template
+      pontos_vitorias: ptRaw?.pontos_vitorias || 0,
+      bonus_5x0: ptRaw?.bonus_5x0 || 0,
+      pontos_podio: (ptRaw?.pontos_podio_principal || 0) + (ptRaw?.pontos_podio_consolacao || 0),
+      pontos_manuais: dbPM,
+      pontuacao: ptRaw?.total || 0,
+      mensagem_otimista: gerarMensagemOtimista(dbVitorias, dbDerrotas, ptRaw?.total || 0),
     }
 
     return processarTemplateWhatsApp(config?.mensagem_template || '', dados)
@@ -240,7 +237,7 @@ export default function Auditoria() {
         </div>
         <Button
           onClick={handleSendAll}
-          disabled={sendingAll || !rodadaId || atletasComPontuacao.length === 0}
+          disabled={sendingAll || !rodadaId || isLoadingData || atletasComPontuacao.length === 0}
         >
           {sendingAll ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -306,7 +303,7 @@ export default function Auditoria() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Todos os atletas</SelectItem>
-                  {atletasDaRodada.map((a) => (
+                  {atletasDaRodada.map((a: any) => (
                     <SelectItem key={a.id} value={a.id}>
                       {a.nome_completo}
                     </SelectItem>
@@ -327,59 +324,66 @@ export default function Auditoria() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Atleta</TableHead>
-                  <TableHead>Telefone</TableHead>
-                  <TableHead>Pontos</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {atletasComPontuacao.map((a) => (
-                  <TableRow key={a.id}>
-                    <TableCell
-                      className="font-medium cursor-pointer text-primary hover:underline"
-                      onClick={() => setAtletaId(a.id)}
-                    >
-                      {a.nome_completo}
-                    </TableCell>
-                    <TableCell>
-                      {a.telefone || (
-                        <span className="text-muted-foreground text-xs">Sem número</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{a.pontuacao?.total || 0} pts</Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleSendIndividual(a.id)}
-                        disabled={sendingMap[a.id] || !a.telefone}
-                        className="gap-2"
-                      >
-                        {sendingMap[a.id] ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Smartphone className="h-4 w-4" />
-                        )}
-                        WhatsApp
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {atletasComPontuacao.length === 0 && (
+            {isLoadingData ? (
+              <div className="flex flex-col items-center justify-center p-12 text-muted-foreground">
+                <Loader2 className="h-8 w-8 animate-spin mb-4 text-primary" />
+                <p>Sincronizando pontuações com o banco de dados...</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center p-8 text-muted-foreground">
-                      Nenhum atleta nesta rodada.
-                    </TableCell>
+                    <TableHead>Atleta</TableHead>
+                    <TableHead>Telefone</TableHead>
+                    <TableHead>Pontos</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {atletasComPontuacao.map((a) => (
+                    <TableRow key={a.id}>
+                      <TableCell
+                        className="font-medium cursor-pointer text-primary hover:underline"
+                        onClick={() => setAtletaId(a.id)}
+                      >
+                        {a.nome_completo}
+                      </TableCell>
+                      <TableCell>
+                        {a.telefone || (
+                          <span className="text-muted-foreground text-xs">Sem número</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{a.pontuacao?.total || 0} pts</Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleSendIndividual(a.id)}
+                          disabled={sendingMap[a.id] || !a.telefone}
+                          className="gap-2"
+                        >
+                          {sendingMap[a.id] ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Smartphone className="h-4 w-4" />
+                          )}
+                          WhatsApp
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {atletasComPontuacao.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center p-8 text-muted-foreground">
+                        Nenhum atleta nesta rodada.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       )}
@@ -494,6 +498,15 @@ export default function Auditoria() {
                     {pontuacao.pontos_podio_consolacao} pts
                   </span>
                 </div>
+                {pontuacao.pontos_manuais !== 0 && (
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">Ajuste Manual:</span>
+                    <span className="font-medium text-primary">
+                      {pontuacao.pontos_manuais > 0 ? '+' : ''}
+                      {pontuacao.pontos_manuais} pts
+                    </span>
+                  </div>
+                )}
                 <div className="pt-4 border-t flex justify-between items-center">
                   <span className="font-bold">Total da Rodada</span>
                   <span className="text-2xl font-black text-primary">{pontuacao.total}</span>

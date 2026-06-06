@@ -1,5 +1,6 @@
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import useAppStore, { Grupo } from '@/stores/useAppStore'
+import { supabase } from '@/lib/supabase/client'
 import {
   Table,
   TableBody,
@@ -11,6 +12,22 @@ import {
 
 export default function GrupoClassificacao({ grupo }: { grupo: Grupo }) {
   const { partidas, grupoAtletas, atletas, rodadas, sistemas, regras } = useAppStore()
+  const [pontuacoesDb, setPontuacoesDb] = useState<any[]>([])
+
+  useEffect(() => {
+    const fetchPontos = async () => {
+      const { data } = await supabase
+        .from('pontuacoes_rodada')
+        .select('atleta_id, pontos_manuais')
+        .eq('rodada_id', grupo.rodada_id)
+      if (data) setPontuacoesDb(data)
+    }
+    fetchPontos()
+
+    const handleRefresh = () => fetchPontos()
+    window.addEventListener('refresh-classificacao', handleRefresh)
+    return () => window.removeEventListener('refresh-classificacao', handleRefresh)
+  }, [grupo.rodada_id])
 
   const standings = useMemo(() => {
     const stats: Record<string, any> = {}
@@ -42,6 +59,10 @@ export default function GrupoClassificacao({ grupo }: { grupo: Grupo }) {
     const presencaPoints = getRule('pontos_presenca')
     Object.values(stats).forEach((s: any) => {
       s.points += presencaPoints
+      const pDb = pontuacoesDb.find((p) => p.atleta_id === s.atleta_id)
+      if (pDb && pDb.pontos_manuais) {
+        s.points += pDb.pontos_manuais
+      }
     })
 
     grupoPartidas.forEach((p) => {
@@ -130,7 +151,7 @@ export default function GrupoClassificacao({ grupo }: { grupo: Grupo }) {
     })
 
     return results
-  }, [partidas, grupoAtletas, atletas, rodadas, sistemas, regras, grupo.id])
+  }, [partidas, grupoAtletas, atletas, rodadas, sistemas, regras, grupo.id, pontuacoesDb])
 
   return (
     <div className="space-y-2">
