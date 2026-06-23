@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, Eye, Calendar, MapPin, Clock, Loader2 } from 'lucide-react'
+import { Plus, Eye, Calendar, MapPin, Clock, Loader2, Trash } from 'lucide-react'
 import useAppStore from '@/stores/useAppStore'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -13,6 +13,18 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
+import { supabase } from '@/lib/supabase/client'
 import { Badge } from '@/components/ui/badge'
 import {
   Dialog,
@@ -52,6 +64,7 @@ const getStatusColor = (status: string) => {
 export default function Rodadas() {
   const { rodadas, ligas, sistemas, addRodada } = useAppStore()
   const [open, setOpen] = useState(false)
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set())
 
   const [formData, setFormData] = useState({
     liga_id: '',
@@ -89,6 +102,25 @@ export default function Rodadas() {
       setIsSaving(false)
     }
   }
+
+  const handleDelete = async (id: string) => {
+    try {
+      const { error } = await supabase.from('rodadas').delete().eq('id', id)
+      if (error) throw error
+
+      setDeletedIds((prev) => {
+        const next = new Set(prev)
+        next.add(id)
+        return next
+      })
+      toast.success('Rodada excluída com sucesso')
+    } catch (error: any) {
+      console.error(error)
+      toast.error(error.message || 'Erro ao excluir rodada. Tente novamente.')
+    }
+  }
+
+  const visibleRodadas = rodadas.filter((r) => !deletedIds.has(r.id))
 
   return (
     <div className="space-y-6">
@@ -236,7 +268,7 @@ export default function Rodadas() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rodadas.map((rodada) => {
+              {visibleRodadas.map((rodada) => {
                 const liga = ligas.find((l) => l.id === rodada.liga_id)
                 return (
                   <TableRow key={rodada.id}>
@@ -263,16 +295,47 @@ export default function Rodadas() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" asChild>
-                        <Link to={`/admin/rodadas/${rodada.id}`}>
-                          <Eye className="mr-2 h-4 w-4" /> Gerenciar
-                        </Link>
-                      </Button>
+                      <div className="flex items-center justify-end gap-2">
+                        <Button variant="ghost" size="sm" asChild>
+                          <Link to={`/admin/rodadas/${rodada.id}`}>
+                            <Eye className="mr-2 h-4 w-4" /> Gerenciar
+                          </Link>
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-destructive hover:text-destructive/90 hover:bg-destructive/10"
+                            >
+                              <Trash className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Tem certeza que deseja excluir esta rodada? Esta ação não pode ser
+                                desfeita e excluirá todos os jogos, grupos e pontuações vinculados.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleDelete(rodada.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Confirmar Exclusão
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </TableCell>
                   </TableRow>
                 )
               })}
-              {rodadas.length === 0 && (
+              {visibleRodadas.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                     Nenhuma rodada cadastrada.
