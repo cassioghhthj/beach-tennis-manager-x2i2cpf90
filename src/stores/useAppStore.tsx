@@ -112,6 +112,13 @@ export interface PontuacaoRodada {
   pontos_podio_principal: number
   pontos_podio_consolacao: number
   pontos_manuais: number
+  observacao_manuais?: string
+  pontos_presenca?: number
+  vitorias?: number
+  derrotas?: number
+  games_pro?: number
+  games_contra?: number
+  saldo_games?: number
   total: number
 }
 
@@ -161,26 +168,27 @@ interface AppState {
   ) => Promise<void>
   regras: RegraPontuacao[]
   rodadas: Rodada[]
-  addRodada: (r: Omit<Rodada, 'id'>) => Promise<void>
-  updateRodada: (id: string, r: Partial<Rodada>) => Promise<void>
-  deleteRodada: (id: string) => Promise<void>
+  addRodada: (r: Omit<Rodada, 'id'>) => Promise<any>
+  updateRodada: (id: string, r: Partial<Rodada>) => Promise<any>
+  deleteRodada: (id: string) => Promise<any>
   grupos: Grupo[]
-  addGrupo: (g: Omit<Grupo, 'id'>) => Promise<void>
-  updateGrupo: (id: string, g: Partial<Grupo>) => Promise<void>
-  deleteGrupo: (id: string) => Promise<void>
+  addGrupo: (g: Omit<Grupo, 'id'>) => Promise<any>
+  updateGrupo: (id: string, g: Partial<Grupo>) => Promise<any>
+  deleteGrupo: (id: string) => Promise<any>
   grupoAtletas: GrupoAtleta[]
-  addGrupoAtleta: (ga: Omit<GrupoAtleta, 'id'>) => Promise<void>
-  updateGrupoAtleta: (id: string, ga: Partial<GrupoAtleta>) => Promise<void>
-  deleteGrupoAtleta: (id: string) => Promise<void>
+  addGrupoAtleta: (ga: Omit<GrupoAtleta, 'id'>) => Promise<any>
+  updateGrupoAtleta: (id: string, ga: Partial<GrupoAtleta>) => Promise<any>
+  deleteGrupoAtleta: (id: string) => Promise<any>
   partidas: Partida[]
-  substituirAtletaNoGrupo: (gaId: string, subId: string, motivo: string) => Promise<void>
-  addPartida: (p: Omit<Partida, 'id'>) => Promise<void>
-  updatePartida: (id: string, p: Partial<Partida>) => Promise<void>
-  deletePartida: (id: string) => Promise<void>
+  substituirAtletaNoGrupo: (gaId: string, subId: string, motivo: string) => Promise<any>
+  addPartida: (p: Omit<Partida, 'id'>) => Promise<any>
+  updatePartida: (id: string, p: Partial<Partida>) => Promise<any>
+  deletePartida: (id: string) => Promise<any>
   podios: Podio[]
-  salvarPodiosRodada: (rodadaId: string, p: Partial<Podio>[]) => Promise<void>
+  salvarPodiosRodada: (rodadaId: string, p: Partial<Podio>[]) => Promise<any>
   pontuacoes: PontuacaoRodada[]
-  finalizarRodada: (rodadaId: string) => Promise<void>
+  finalizarRodada: (rodadaId: string) => Promise<any>
+  reloadPontuacoesRodada: (rodadaId: string) => Promise<void>
   updatePontuacaoManual: (rodadaId: string, atletaId: string, pontos: number) => Promise<void>
   publicacoes: Publicacao[]
   publicarRanking: (
@@ -384,43 +392,66 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const addRodada = async (r: Omit<Rodada, 'id'>) => {
-    const { data } = await supabase.from('rodadas').insert([r]).select().single()
+    const { data, error } = await supabase.from('rodadas').insert([r]).select().single()
+    if (error) return { error }
     if (data) setRodadas((prev) => [data as Rodada, ...prev])
+    return { data }
   }
   const updateRodada = async (id: string, r: Partial<Rodada>) => {
-    const { data } = await supabase.from('rodadas').update(r).eq('id', id).select().single()
+    const { data, error } = await supabase.from('rodadas').update(r).eq('id', id).select().single()
+    if (error) return { error }
     if (data) setRodadas((prev) => prev.map((item) => (item.id === id ? (data as Rodada) : item)))
+    return { data }
   }
   const deleteRodada = async (id: string) => {
-    await supabase.from('rodadas').delete().eq('id', id)
+    const { error } = await supabase.from('rodadas').delete().eq('id', id)
+    if (error) return { error }
     setRodadas((prev) => prev.filter((item) => item.id !== id))
+    return { success: true }
   }
 
   const addGrupo = async (g: Omit<Grupo, 'id'>) => {
-    const { data } = await supabase.from('grupos').insert([g]).select().single()
+    const { data, error } = await supabase.from('grupos').insert([g]).select().single()
+    if (error) return { error }
     if (data) setGrupos((prev) => [...prev, data as Grupo])
+    return { data }
   }
   const updateGrupo = async (id: string, g: Partial<Grupo>) => {
-    const { data } = await supabase.from('grupos').update(g).eq('id', id).select().single()
+    const { data, error } = await supabase.from('grupos').update(g).eq('id', id).select().single()
+    if (error) return { error }
     if (data) setGrupos((prev) => prev.map((item) => (item.id === id ? (data as Grupo) : item)))
+    return { data }
   }
   const deleteGrupo = async (id: string) => {
-    await supabase.from('grupos').delete().eq('id', id)
+    const { error } = await supabase.from('grupos').delete().eq('id', id)
+    if (error) return { error }
     setGrupos((prev) => prev.filter((item) => item.id !== id))
+    return { success: true }
   }
 
   const addGrupoAtleta = async (ga: Omit<GrupoAtleta, 'id'>) => {
-    const { data } = await supabase.from('grupo_atletas').insert([ga]).select().single()
+    const { data, error } = await supabase.from('grupo_atletas').insert([ga]).select().single()
+    if (error) return { error }
     if (data) setGrupoAtletas((prev) => [...prev, data as GrupoAtleta])
+    return { data }
   }
   const updateGrupoAtleta = async (id: string, ga: Partial<GrupoAtleta>) => {
-    const { data } = await supabase.from('grupo_atletas').update(ga).eq('id', id).select().single()
+    const { data, error } = await supabase
+      .from('grupo_atletas')
+      .update(ga)
+      .eq('id', id)
+      .select()
+      .single()
+    if (error) return { error }
     if (data)
       setGrupoAtletas((prev) => prev.map((item) => (item.id === id ? (data as GrupoAtleta) : item)))
+    return { data }
   }
   const deleteGrupoAtleta = async (id: string) => {
-    await supabase.from('grupo_atletas').delete().eq('id', id)
+    const { error } = await supabase.from('grupo_atletas').delete().eq('id', id)
+    if (error) return { error }
     setGrupoAtletas((prev) => prev.filter((item) => item.id !== id))
+    return { success: true }
   }
 
   const substituirAtletaNoGrupo = async (gaId: string, subId: string, motivo: string) => {
@@ -499,16 +530,22 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const addPartida = async (p: Omit<Partida, 'id'>) => {
-    const { data } = await supabase.from('partidas').insert([p]).select().single()
+    const { data, error } = await supabase.from('partidas').insert([p]).select().single()
+    if (error) return { error }
     if (data) setPartidas((prev) => [...prev, data as Partida])
+    return { data }
   }
   const updatePartida = async (id: string, p: Partial<Partida>) => {
-    const { data } = await supabase.from('partidas').update(p).eq('id', id).select().single()
+    const { data, error } = await supabase.from('partidas').update(p).eq('id', id).select().single()
+    if (error) return { error }
     if (data) setPartidas((prev) => prev.map((item) => (item.id === id ? (data as Partida) : item)))
+    return { data }
   }
   const deletePartida = async (id: string) => {
-    await supabase.from('partidas').delete().eq('id', id)
+    const { error } = await supabase.from('partidas').delete().eq('id', id)
+    if (error) return { error }
     setPartidas((prev) => prev.filter((item) => item.id !== id))
+    return { success: true }
   }
 
   const salvarPodiosRodada = async (rodadaId: string, novos: Partial<Podio>[]) => {
@@ -523,6 +560,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
     } else {
       setPodios((prev) => prev.filter((p) => p.rodada_id !== rodadaId))
+    }
+  }
+
+  const reloadPontuacoesRodada = async (rodadaId: string) => {
+    const { data } = await supabase.from('pontuacoes_rodada').select('*').eq('rodada_id', rodadaId)
+    if (data) {
+      setPontuacoes((prev) => [
+        ...prev.filter((p) => p.rodada_id !== rodadaId),
+        ...(data as PontuacaoRodada[]),
+      ])
     }
   }
 
@@ -547,16 +594,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     const { data: existingPts } = await supabase
       .from('pontuacoes_rodada')
-      .select('atleta_id, pontos_manuais')
+      .select(
+        'atleta_id, pontos_manuais, observacao_manuais, pontos_podio_principal, pontos_podio_consolacao, pontos_presenca',
+      )
       .eq('rodada_id', rodadaId)
-    const manuaisMap = new Map<string, number>()
+
+    const prevMap = new Map<string, any>()
     if (existingPts) {
       existingPts.forEach((p) => {
-        if (p.atleta_id) manuaisMap.set(p.atleta_id, p.pontos_manuais || 0)
+        if (p.atleta_id) prevMap.set(p.atleta_id, p)
       })
     }
-
-    await supabase.from('pontuacoes_rodada').delete().eq('rodada_id', rodadaId)
 
     const sis = sistemas.find((s) => s.id === rodada.sistema_id)
     const snapshot = currentRegras.length
@@ -571,15 +619,23 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const initAtleta = (id: string) => {
       if (!id) return null
       if (!atletasMap.has(id)) {
+        const prev = prevMap.get(id)
         atletasMap.set(id, {
           rodada_id: rodadaId,
           atleta_id: id,
           pontos_grupo: 0,
           pontos_vitorias: 0,
           bonus_5x0: 0,
-          pontos_podio_principal: 0,
-          pontos_podio_consolacao: 0,
-          pontos_manuais: manuaisMap.get(id) || 0,
+          pontos_podio_principal: prev?.pontos_podio_principal || 0,
+          pontos_podio_consolacao: prev?.pontos_podio_consolacao || 0,
+          pontos_manuais: prev?.pontos_manuais || 0,
+          observacao_manuais: prev?.observacao_manuais || '',
+          pontos_presenca: prev?.pontos_presenca || 0,
+          vitorias: prev?.vitorias || 0,
+          derrotas: prev?.derrotas || 0,
+          games_pro: prev?.games_pro || 0,
+          games_contra: prev?.games_contra || 0,
+          saldo_games: prev?.saldo_games || 0,
           total: 0,
         })
       }
@@ -688,12 +744,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         (v.bonus_5x0 || 0) +
         (v.pontos_podio_principal || 0) +
         (v.pontos_podio_consolacao || 0) +
+        (v.pontos_presenca || 0) +
         (v.pontos_manuais || 0)
       newPts.push(v)
     })
 
     if (newPts.length > 0) {
-      const { data: insertedPts } = await supabase.from('pontuacoes_rodada').insert(newPts).select()
+      const { data: insertedPts, error } = await supabase
+        .from('pontuacoes_rodada')
+        .upsert(newPts, { onConflict: 'rodada_id, atleta_id' })
+        .select()
+
+      if (error) return { error }
       if (insertedPts) {
         setPontuacoes((prev) => {
           const filtered = prev.filter((p) => p.rodada_id !== rodadaId)
@@ -701,6 +763,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         })
       }
     }
+    return { data: updatedRodada }
   }
 
   const updatePontuacaoManual = async (rodadaId: string, atletaId: string, pontos: number) => {
@@ -800,6 +863,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         salvarPodiosRodada,
         pontuacoes,
         finalizarRodada,
+        reloadPontuacoesRodada,
         updatePontuacaoManual,
         publicacoes,
         publicarRanking,

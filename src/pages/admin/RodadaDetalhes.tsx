@@ -39,7 +39,15 @@ const getStatusColor = (status: string) => {
 export default function RodadaDetalhes() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { rodadas, grupos, addGrupo, updateRodada, finalizarRodada, partidas } = useAppStore()
+  const {
+    rodadas,
+    grupos,
+    addGrupo,
+    updateRodada,
+    finalizarRodada,
+    reloadPontuacoesRodada,
+    partidas,
+  } = useAppStore()
   const { toast } = useToast()
 
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
@@ -86,48 +94,11 @@ export default function RodadaDetalhes() {
     try {
       setIsRecalculating(true)
 
-      const { data: bkp } = await supabase
-        .from('pontuacoes_rodada')
-        .select(
-          'atleta_id, pontos_manuais, observacao_manuais, pontos_podio_principal, pontos_podio_consolacao',
-        )
-        .eq('rodada_id', rodada.id)
-
       const res = (await finalizarRodada(rodada.id)) as any
       if (res?.error) throw res.error
       await (supabase.rpc as any)('processar_presenca_rodada', { p_rodada_id: rodada.id })
 
-      if (bkp && bkp.length > 0) {
-        for (const b of bkp) {
-          if (
-            b.pontos_manuais !== 0 ||
-            b.pontos_podio_principal !== 0 ||
-            b.pontos_podio_consolacao !== 0 ||
-            b.observacao_manuais
-          ) {
-            await supabase
-              .from('pontuacoes_rodada')
-              .update({
-                pontos_manuais: b.pontos_manuais,
-                observacao_manuais: b.observacao_manuais,
-                pontos_podio_principal: b.pontos_podio_principal,
-                pontos_podio_consolacao: b.pontos_podio_consolacao,
-              })
-              .eq('rodada_id', rodada.id)
-              .eq('atleta_id', b.atleta_id)
-          }
-        }
-      }
-
-      const { data: fresh } = await supabase
-        .from('pontuacoes_rodada')
-        .select('*')
-        .eq('rodada_id', rodada.id)
-      if (fresh && (useAppStore as any).setState) {
-        ;(useAppStore as any).setState((state: any) => ({
-          pontuacoes: [...state.pontuacoes.filter((p: any) => p.rodada_id !== rodada.id), ...fresh],
-        }))
-      }
+      await reloadPontuacoesRodada(rodada.id)
 
       toast({
         title: 'Sucesso',
@@ -194,55 +165,15 @@ export default function RodadaDetalhes() {
       }
 
       if (isForward && nextStatus === 'Round Finalized') {
-        const { data: bkp } = await supabase
-          .from('pontuacoes_rodada')
-          .select(
-            'atleta_id, pontos_manuais, observacao_manuais, pontos_podio_principal, pontos_podio_consolacao',
-          )
-          .eq('rodada_id', rodada.id)
-
         const res = (await finalizarRodada(rodada.id)) as any
         if (res?.error) throw res.error
 
         await (supabase.rpc as any)('processar_presenca_rodada', { p_rodada_id: rodada.id })
 
-        if (bkp && bkp.length > 0) {
-          for (const b of bkp) {
-            if (
-              b.pontos_manuais !== 0 ||
-              b.pontos_podio_principal !== 0 ||
-              b.pontos_podio_consolacao !== 0 ||
-              b.observacao_manuais
-            ) {
-              await supabase
-                .from('pontuacoes_rodada')
-                .update({
-                  pontos_manuais: b.pontos_manuais,
-                  observacao_manuais: b.observacao_manuais,
-                  pontos_podio_principal: b.pontos_podio_principal,
-                  pontos_podio_consolacao: b.pontos_podio_consolacao,
-                })
-                .eq('rodada_id', rodada.id)
-                .eq('atleta_id', b.atleta_id)
-            }
-          }
-        }
-
         const updateRes = (await updateRodada(rodada.id, { status: nextStatus })) as any
         if (updateRes?.error) throw updateRes.error
 
-        const { data: fresh } = await supabase
-          .from('pontuacoes_rodada')
-          .select('*')
-          .eq('rodada_id', rodada.id)
-        if (fresh && (useAppStore as any).setState) {
-          ;(useAppStore as any).setState((state: any) => ({
-            pontuacoes: [
-              ...state.pontuacoes.filter((p: any) => p.rodada_id !== rodada.id),
-              ...fresh,
-            ],
-          }))
-        }
+        await reloadPontuacoesRodada(rodada.id)
 
         toast({
           title: 'Status atualizado',
