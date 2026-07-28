@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Plus, Eye, Calendar, MapPin, Clock, Loader2, Trash } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { Plus, Eye, Calendar, MapPin, Clock, Loader2, Trash, Filter } from 'lucide-react'
 import useAppStore from '@/stores/useAppStore'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -65,6 +65,23 @@ export default function Rodadas() {
   const { rodadas, ligas, sistemas, addRodada } = useAppStore()
   const [open, setOpen] = useState(false)
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set())
+  const [searchParams, setSearchParams] = useSearchParams()
+  const ligaFilter = searchParams.get('liga') || 'all'
+
+  const handleLigaFilterChange = (value: string) => {
+    if (value === 'all') {
+      searchParams.delete('liga')
+    } else {
+      searchParams.set('liga', value)
+    }
+    setSearchParams(searchParams, { replace: true })
+  }
+
+  const filteredRodadas = useMemo(() => {
+    const visible = rodadas.filter((r) => !deletedIds.has(r.id))
+    if (ligaFilter === 'all') return visible
+    return visible.filter((r) => r.liga_id === ligaFilter)
+  }, [rodadas, deletedIds, ligaFilter])
 
   const [formData, setFormData] = useState({
     liga_id: '',
@@ -119,8 +136,6 @@ export default function Rodadas() {
       toast.error(error.message || 'Erro ao excluir rodada. Tente novamente.')
     }
   }
-
-  const visibleRodadas = rodadas.filter((r) => !deletedIds.has(r.id))
 
   return (
     <div className="space-y-6">
@@ -251,6 +266,23 @@ export default function Rodadas() {
         </Dialog>
       </div>
 
+      <div className="flex items-center gap-3">
+        <Filter className="h-4 w-4 text-muted-foreground" />
+        <Select value={ligaFilter} onValueChange={handleLigaFilterChange}>
+          <SelectTrigger className="w-[260px]">
+            <SelectValue placeholder="Filtrar por Liga" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas as Ligas</SelectItem>
+            {ligas.map((l) => (
+              <SelectItem key={l.id} value={l.id}>
+                {l.nome}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       <Card>
         <CardHeader>
           <CardTitle>Lista de Rodadas</CardTitle>
@@ -268,7 +300,7 @@ export default function Rodadas() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {visibleRodadas.map((rodada) => {
+              {filteredRodadas.map((rodada) => {
                 const liga = ligas.find((l) => l.id === rodada.liga_id)
                 return (
                   <TableRow key={rodada.id}>
@@ -335,10 +367,12 @@ export default function Rodadas() {
                   </TableRow>
                 )
               })}
-              {visibleRodadas.length === 0 && (
+              {filteredRodadas.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                    Nenhuma rodada cadastrada.
+                    {ligaFilter !== 'all'
+                      ? 'Nenhuma rodada encontrada para esta liga.'
+                      : 'Nenhuma rodada cadastrada.'}
                   </TableCell>
                 </TableRow>
               )}
