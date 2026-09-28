@@ -10,8 +10,8 @@ export interface WhatsappConfig {
 }
 
 export const getWhatsappConfig = async () => {
-  const { data, error } = await supabase
-    .from('configuracoes_whatsapp' as any)
+  const { data, error } = await (supabase as any)
+    .from('configuracoes_whatsapp')
     .select('*')
     .single()
 
@@ -28,20 +28,20 @@ export const saveWhatsappConfig = async (config: Partial<WhatsappConfig>) => {
   } = await supabase.auth.getUser()
   if (!user) throw new Error('User not found')
 
-  const { data: existing } = await supabase
-    .from('configuracoes_whatsapp' as any)
+  const { data: existing } = await (supabase as any)
+    .from('configuracoes_whatsapp')
     .select('id')
     .single()
 
   if (existing) {
-    const { error } = await supabase
-      .from('configuracoes_whatsapp' as any)
+    const { error } = await (supabase as any)
+      .from('configuracoes_whatsapp')
       .update({ ...config, updated_at: new Date().toISOString() })
-      .eq('id', existing.id)
+      .eq('id', (existing as any).id)
     if (error) throw error
   } else {
-    const { error } = await supabase
-      .from('configuracoes_whatsapp' as any)
+    const { error } = await (supabase as any)
+      .from('configuracoes_whatsapp')
       .insert({ ...config, user_id: user.id })
     if (error) throw error
   }

@@ -143,7 +143,7 @@ export default function ConfiguracoesWhatsapp() {
     setSaving(true)
     try {
       await saveWhatsappConfig(values)
-      toast({ title: 'Configurações salvas com sucesso!', variant: 'success' })
+      toast({ title: 'Configurações salvas com sucesso!' })
     } catch (error) {
       console.error(error)
       toast({ title: 'Erro ao salvar configurações', variant: 'destructive' })

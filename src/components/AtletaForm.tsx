@@ -32,14 +32,16 @@ const formSchema = z.object({
   sexo: z.enum(['M', 'F']),
   categoria_principal: z.string().min(1, 'Obrigatório'),
   status: z.enum(['Ativo', 'Inativo']),
-  observacoes: z.string().optional().default(''),
+  observacoes: z.string().default(''),
   ligas_ids: z.array(z.string()).default([]),
-  avatar_url: z.string().optional().nullable(),
+  avatar_url: z.string().nullable().optional(),
 })
+
+type AtletaFormData = z.infer<typeof formSchema>
 
 interface AtletaFormProps {
   initialData?: any
-  onSubmit: (data: z.infer<typeof formSchema>) => Promise<void> | void
+  onSubmit: (data: AtletaFormData) => Promise<void> | void
   onCancel: () => void
   ligas: Liga[]
   isLoading?: boolean
@@ -55,8 +57,8 @@ export function AtletaForm({
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<AtletaFormData>({
+    resolver: zodResolver(formSchema) as any,
     defaultValues: initialData || {
       nome_completo: '',
       telefone: '',

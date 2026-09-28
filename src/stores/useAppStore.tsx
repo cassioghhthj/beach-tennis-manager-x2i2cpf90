@@ -254,13 +254,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       if (atletaLigasData) setAtletaLigas(atletaLigasData as AtletaLiga[])
       if (sistemasData) setSistemas(sistemasData as SistemaPontuacao[])
       if (regrasData) setRegras(regrasData as RegraPontuacao[])
-      if (rodadasData) setRodadas(rodadasData as Rodada[])
+      if (rodadasData) setRodadas(rodadasData as unknown as Rodada[])
       if (gruposData) setGrupos(gruposData as Grupo[])
       if (grupoAtletasData) setGrupoAtletas(grupoAtletasData as GrupoAtleta[])
       if (partidasData) setPartidas(partidasData as Partida[])
       if (podiosData) setPodios(podiosData as Podio[])
       if (pontuacoesData) setPontuacoes(pontuacoesData as PontuacaoRodada[])
-      if (publicacoesData) setPublicacoes(publicacoesData as Publicacao[])
+      if (publicacoesData) setPublicacoes(publicacoesData as unknown as Publicacao[])
     }
 
     loadData()
@@ -392,15 +392,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const addRodada = async (r: Omit<Rodada, 'id'>) => {
-    const { data, error } = await supabase.from('rodadas').insert([r]).select().single()
+    const { data, error } = await supabase.from('rodadas').insert([r as any]).select().single()
     if (error) return { error }
-    if (data) setRodadas((prev) => [data as Rodada, ...prev])
+    if (data) setRodadas((prev) => [data as unknown as Rodada, ...prev])
     return { data }
   }
   const updateRodada = async (id: string, r: Partial<Rodada>) => {
-    const { data, error } = await supabase.from('rodadas').update(r).eq('id', id).select().single()
+    const { data, error } = await supabase.from('rodadas').update(r as any).eq('id', id).select().single()
     if (error) return { error }
-    if (data) setRodadas((prev) => prev.map((item) => (item.id === id ? (data as Rodada) : item)))
+    if (data) setRodadas((prev) => prev.map((item) => (item.id === id ? (data as unknown as Rodada) : item)))
     return { data }
   }
   const deleteRodada = async (id: string) => {
@@ -553,7 +553,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (novos.length > 0) {
       const { data } = await supabase
         .from('podios')
-        .insert(novos.map((p) => ({ ...p, rodada_id: rodadaId })))
+        .insert(novos.map((p) => ({ ...p, rodada_id: rodadaId } as any)))
         .select()
       if (data) {
         setPodios((prev) => [...prev.filter((p) => p.rodada_id !== rodadaId), ...(data as Podio[])])
@@ -582,14 +582,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       .from('rodadas')
       .update({
         status: 'Round Finalized',
-        snapshot_regras: currentRegras,
+        snapshot_regras: currentRegras as any,
       })
       .eq('id', rodadaId)
       .select()
       .single()
 
     if (updatedRodada) {
-      setRodadas((prev) => prev.map((r) => (r.id === rodadaId ? (updatedRodada as Rodada) : r)))
+      setRodadas((prev) => prev.map((r) => (r.id === rodadaId ? (updatedRodada as unknown as Rodada) : r)))
     }
 
     const { data: existingPts } = await supabase
