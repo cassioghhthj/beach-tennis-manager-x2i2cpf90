@@ -46,6 +46,9 @@ async function run() {
     .order('nome_completo', { ascending: true })
   if (aErr) throw aErr
 
+  // Map to resolve athlete names by ID (includes fallback for any athletes referenced outside)
+  const allReferencedAtletaIds = new Set<string>(atletaIds)
+
   const atletaNameMap = new Map<string, string>()
   atletas?.forEach((a: any) => atletaNameMap.set(a.id, a.nome_completo))
 
@@ -95,7 +98,26 @@ async function run() {
     .in('rodada_id', rodadaIds)
   if (pErr) throw pErr
 
-  // Add athlete names to podios
+  // Collect any extra athlete IDs that might be in podios but not in atleta_ligas
+  const extraAtletaIds: string[] = []
+  rawPodios?.forEach((p: any) => {
+    if (p.atleta1_id && !atletaNameMap.has(p.atleta1_id)) {
+      extraAtletaIds.push(p.atleta1_id)
+    }
+    if (p.atleta2_id && !atletaNameMap.has(p.atleta2_id)) {
+      extraAtletaIds.push(p.atleta2_id)
+    }
+  })
+
+  if (extraAtletaIds.length > 0) {
+    const { data: extraAtletas } = await supabase
+      .from('atletas')
+      .select('*')
+      .in('id', extraAtletaIds)
+    extraAtletas?.forEach((a: any) => atletaNameMap.set(a.id, a.nome_completo))
+  }
+
+  // Add athlete names to podios via join with atletas when the id exists
   const podios = (rawPodios || []).map((p: any) => ({
     ...p,
     atleta1_nome: p.atleta1_id ? atletaNameMap.get(p.atleta1_id) || null : null,

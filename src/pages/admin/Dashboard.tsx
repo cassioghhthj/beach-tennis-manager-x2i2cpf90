@@ -143,7 +143,7 @@ export default function Dashboard() {
                 <CartesianGrid vertical={false} strokeDasharray="3 3" />
                 <XAxis dataKey="name" tickLine={false} tickMargin={10} axisLine={false} />
                 <YAxis axisLine={false} tickLine={false} />
-                <ChartTooltip content={<ChartTooltipContent />} />
+                <ChartTooltip content={<ChartTooltipContent payload={[]} />} />
                 <Line
                   type="monotone"
                   dataKey="pontos"
@@ -168,7 +168,7 @@ export default function Dashboard() {
                 <CartesianGrid vertical={false} strokeDasharray="3 3" />
                 <XAxis dataKey="name" tickLine={false} tickMargin={10} axisLine={false} />
                 <YAxis axisLine={false} tickLine={false} />
-                <ChartTooltip content={<ChartTooltipContent />} />
+                <ChartTooltip content={<ChartTooltipContent payload={[]} />} />
                 <Bar dataKey="count" fill="var(--color-count)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ChartContainer>

@@ -1,0 +1,23 @@
+{
+  "liga": [
+    {
+      "id": "c46e61d2-d2e8-4bba-b524-045169d3bc1b",
+      "user_id": "89544e41-82ca-4122-8b53-41cbfa0e7c10",
+      "nome": "LIGA BEACH SISTERS 5ª T",
+      "categoria": "D",
+      "temporada": "5",
+      "total_rodadas": 12,
+      "status": "Ativo",
+      "descricao": "",
+      "observacoes": "",
+      "created_at": "2026-07-28T23:00:53.506432+00:00"
+    }
+  ],
+  "atletas": [],
+  "atleta_ligas": [],
+  "sistemas_pontuacao": [],
+  "regras_pontuacao": [],
+  "rodadas": [],
+  "pontuacoes_rodada": [],
+  "podios": []
+}

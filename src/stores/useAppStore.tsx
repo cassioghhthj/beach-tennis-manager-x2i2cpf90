@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { supabase } from '@/lib/supabase/client'
+import type { Json } from '@/lib/supabase/types'
 import { useAuth } from '@/hooks/use-auth'
 
 export type Status = 'Ativo' | 'Inativo'
@@ -392,15 +393,27 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const addRodada = async (r: Omit<Rodada, 'id'>) => {
-    const { data, error } = await supabase.from('rodadas').insert([r as any]).select().single()
+    const { data, error } = await supabase
+      .from('rodadas')
+      .insert([r as any])
+      .select()
+      .single()
     if (error) return { error }
     if (data) setRodadas((prev) => [data as unknown as Rodada, ...prev])
     return { data }
   }
   const updateRodada = async (id: string, r: Partial<Rodada>) => {
-    const { data, error } = await supabase.from('rodadas').update(r as any).eq('id', id).select().single()
+    const { data, error } = await supabase
+      .from('rodadas')
+      .update(r as any)
+      .eq('id', id)
+      .select()
+      .single()
     if (error) return { error }
-    if (data) setRodadas((prev) => prev.map((item) => (item.id === id ? (data as unknown as Rodada) : item)))
+    if (data)
+      setRodadas((prev) =>
+        prev.map((item) => (item.id === id ? (data as unknown as Rodada) : item)),
+      )
     return { data }
   }
   const deleteRodada = async (id: string) => {
@@ -553,7 +566,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (novos.length > 0) {
       const { data } = await supabase
         .from('podios')
-        .insert(novos.map((p) => ({ ...p, rodada_id: rodadaId } as any)))
+        .insert(novos.map((p) => ({ ...p, rodada_id: rodadaId }) as any))
         .select()
       if (data) {
         setPodios((prev) => [...prev.filter((p) => p.rodada_id !== rodadaId), ...(data as Podio[])])
@@ -589,7 +602,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       .single()
 
     if (updatedRodada) {
-      setRodadas((prev) => prev.map((r) => (r.id === rodadaId ? (updatedRodada as unknown as Rodada) : r)))
+      setRodadas((prev) =>
+        prev.map((r) => (r.id === rodadaId ? (updatedRodada as unknown as Rodada) : r)),
+      )
     }
 
     const { data: existingPts } = await supabase
@@ -812,10 +827,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       liga_id: ligaId,
       liga_nome: ligaNome,
       temporada,
-      ranking,
+      ranking: ranking as unknown as Json,
     }
     const { data } = await supabase.from('publicacoes').insert([novaPub]).select().single()
-    if (data) setPublicacoes((prev) => [data as Publicacao, ...prev])
+    if (data) setPublicacoes((prev) => [data as unknown as Publicacao, ...prev])
   }
 
   const deletePublicacao = async (id: string) => {
