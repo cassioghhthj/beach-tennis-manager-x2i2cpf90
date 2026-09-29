@@ -19,10 +19,11 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
-import { Edit, Plus, Search } from 'lucide-react'
+import { Edit, Plus, Search, Download, Loader2 } from 'lucide-react'
 import useAppStore, { Liga } from '@/stores/useAppStore'
 import { LigaForm } from '@/components/LigaForm'
 import { toast } from 'sonner'
+import { exportLigaData, downloadJsonFile } from '@/services/exportLigaData'
 
 export default function Ligas() {
   const { ligas, addLiga, updateLiga } = useAppStore()
@@ -30,6 +31,22 @@ export default function Ligas() {
   const [statusFilter, setStatusFilter] = useState('Todos')
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingLiga, setEditingLiga] = useState<Liga | null>(null)
+  const [exportingId, setExportingId] = useState<string | null>(null)
+
+  const handleExportLiga = async (liga: Liga) => {
+    try {
+      setExportingId(liga.id)
+      const data = await exportLigaData(liga.id)
+      const filename = `${liga.nome.toLowerCase().replace(/[^a-z0-9]/g, '_')}.json`
+      downloadJsonFile(filename, data)
+      toast.success(`Exportação de ${liga.nome} concluída!`)
+    } catch (err: any) {
+      console.error('Erro ao exportar liga:', err)
+      toast.error('Erro ao exportar liga: ' + (err?.message || 'Erro desconhecido'))
+    } finally {
+      setExportingId(null)
+    }
+  }
 
   const filteredLigas = ligas.filter((l) => {
     const matchSearch = l.nome.toLowerCase().includes(search.toLowerCase())
@@ -119,9 +136,24 @@ export default function Ligas() {
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
-                  <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(liga)}>
-                    <Edit className="h-4 w-4 text-muted-foreground hover:text-primary" />
-                  </Button>
+                  <div className="flex items-center justify-end gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      title="Exportar JSON da Liga"
+                      disabled={exportingId === liga.id}
+                      onClick={() => handleExportLiga(liga)}
+                    >
+                      {exportingId === liga.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                      ) : (
+                        <Download className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                      )}
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(liga)}>
+                      <Edit className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}

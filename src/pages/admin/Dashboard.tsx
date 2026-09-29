@@ -1,22 +1,45 @@
-import { useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Trophy, Users, Star, Activity, Medal, Target, Flame } from 'lucide-react'
+import {
+  Trophy,
+  Users,
+  Star,
+  Activity,
+  Medal,
+  Target,
+  Download,
+  Loader2,
+  FileJson,
+  CheckCircle2,
+} from 'lucide-react'
 import useAppStore from '@/stores/useAppStore'
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Line, LineChart } from 'recharts'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
+import { exportLigaData, downloadJsonFile, LIGA_ELAS_EM_JOGO_ID } from '@/services/exportLigaData'
 
 export default function Dashboard() {
   const { ligas, atletas, sistemas, rodadas, pontuacoes } = useAppStore()
+  const [downloading, setDownloading] = useState(false)
+  const [downloadSuccess, setDownloadSuccess] = useState(false)
+
+  const handleExportElas = async () => {
+    try {
+      setDownloading(true)
+      setDownloadSuccess(false)
+      const data = await exportLigaData(LIGA_ELAS_EM_JOGO_ID)
+      downloadJsonFile('liga_elas_em_jogo.json', data)
+      setDownloadSuccess(true)
+      setTimeout(() => setDownloadSuccess(false), 4000)
+    } catch (err) {
+      console.error('Erro ao exportar dados da liga:', err)
+      alert('Falha ao exportar dados da liga. Verifique sua conexão e tente novamente.')
+    } finally {
+      setDownloading(false)
+    }
+  }
 
   const stats = [
     {
@@ -84,6 +107,57 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8 pb-10">
+      {/* Banner de Exportação de Dados */}
+      <Card className="border-primary/30 bg-primary/5">
+        <CardContent className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <FileJson className="h-5 w-5 text-primary" />
+              <h3 className="font-semibold text-base">Exportação Completa: LIGA ELAS EM JOGO</h3>
+              <Badge variant="outline" className="border-primary/40 text-primary text-xs">
+                JSON Consolidado
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Arquivo com todos os 8 arrays originais do banco (1 liga, 30 atletas, 30 vínculos, 1
+              sistema, 21 regras, 9 rodadas com snapshots, 111 pontuações completas e 24 pódios).
+            </p>
+          </div>
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <a
+              href="/exports/liga_elas_em_jogo.json"
+              download="liga_elas_em_jogo.json"
+              className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Download Direto
+            </a>
+            <Button
+              onClick={handleExportElas}
+              disabled={downloading}
+              className="w-full sm:w-auto shadow-sm"
+            >
+              {downloading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Gerando do Banco...
+                </>
+              ) : downloadSuccess ? (
+                <>
+                  <CheckCircle2 className="mr-2 h-4 w-4 text-green-400" />
+                  Baixado com Sucesso!
+                </>
+              ) : (
+                <>
+                  <Download className="mr-2 h-4 w-4" />
+                  Exportar Dados Frescos
+                </>
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat, i) => (
           <Card key={i} className="border-border/50 shadow-sm transition-all hover:shadow-md">

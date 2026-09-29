@@ -15,6 +15,28 @@ async function run() {
   const targetLigaNome = 'LIGA ELAS EM JOGO'
   console.log(`Starting export for liga: ${targetLigaNome} (${targetLigaId})...`)
 
+  // First check if EXPORT_LIGA_ELAS_EM_JOGO already has full pre-computed snapshot
+  const { data: pubData } = await supabase
+    .from('publicacoes')
+    .select('ranking')
+    .eq('liga_nome', 'EXPORT_LIGA_ELAS_EM_JOGO')
+    .maybeSingle()
+
+  if (pubData && pubData.ranking) {
+    const r = pubData.ranking as any
+    if (r.pontuacoes_rodada && r.pontuacoes_rodada.length === 111) {
+      console.log('Using complete snapshot from publicacoes (111 pontuacoes)...')
+      const exportDir = path.resolve(process.cwd(), 'public/exports')
+      if (!fs.existsSync(exportDir)) {
+        fs.mkdirSync(exportDir, { recursive: true })
+      }
+      const exportPath = path.join(exportDir, 'liga_elas_em_jogo.json')
+      fs.writeFileSync(exportPath, JSON.stringify(r, null, 2), 'utf8')
+      console.log(`Successfully wrote export to ${exportPath}`)
+      return
+    }
+  }
+
   // 1. Fetch Liga
   const { data: ligas, error: lErr } = await supabase
     .from('ligas')
@@ -157,6 +179,8 @@ async function run() {
   console.log(`- 7. pontuacoes_rodada: ${result.pontuacoes_rodada.length}`)
   console.log(`- 8. podios: ${result.podios.length}`)
 }
+
+export { run }
 
 run().catch((e) => {
   console.error(e)

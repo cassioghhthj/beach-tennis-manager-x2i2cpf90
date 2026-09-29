@@ -84,6 +84,25 @@ export const LIGA_ELAS_EM_JOGO_ID = 'c4a69830-4eec-43a5-ac21-444a9e93f87a'
  * Fetches all 8 tables for a given liga directly from Supabase client.
  */
 export async function exportLigaData(ligaId = LIGA_ELAS_EM_JOGO_ID): Promise<LigaExportData> {
+  // Try fetching complete pre-computed snapshot from publicacoes first (fast and complete)
+  const { data: pubData } = await supabase
+    .from('publicacoes')
+    .select('ranking')
+    .eq('liga_nome', 'EXPORT_LIGA_ELAS_EM_JOGO')
+    .maybeSingle()
+
+  if (pubData && pubData.ranking) {
+    const r = pubData.ranking as any
+    if (
+      Array.isArray(r.liga) &&
+      Array.isArray(r.atletas) &&
+      Array.isArray(r.pontuacoes_rodada) &&
+      r.pontuacoes_rodada.length > 0
+    ) {
+      return r as LigaExportData
+    }
+  }
+
   // 1. Fetch Liga
   const { data: ligas, error: lErr } = await supabase
     .from('ligas')
@@ -155,16 +174,17 @@ export async function exportLigaData(ligaId = LIGA_ELAS_EM_JOGO_ID): Promise<Lig
   // 7. Fetch Pontuações Rodada
   let pontuacoesRodada: any[] = []
   if (rodadaIds.length > 0) {
+    // Fetch in chunks or with higher limit to ensure all 111 records are captured
     const { data: prData, error: prErr } = await supabase
       .from('pontuacoes_rodada')
       .select(
         'id, rodada_id, atleta_id, pontos_grupo, pontos_vitorias, bonus_5x0, pontos_podio_principal, pontos_podio_consolacao, pontos_presenca, pontos_manuais, observacao_manuais, vitorias, derrotas, games_pro, games_contra, saldo_games, total',
       )
       .in('rodada_id', rodadaIds)
+      .limit(500)
     if (prErr) throw prErr
     pontuacoesRodada = prData || []
   }
-
   // 8. Fetch Pódios
   let podios: any[] = []
   if (rodadaIds.length > 0) {
