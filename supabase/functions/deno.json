@@ -1,5 +1,6 @@
 {
   "_versions": {
-    "send-whatsapp": 27
+    "send-whatsapp": 42,
+    "export-liga": 13
   }
 }
